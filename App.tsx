@@ -14,6 +14,7 @@ import {
   MessageSquare, 
   User as UserIcon, 
   ChevronRight, 
+  ChevronDown,
   History, 
   MapPin, 
   Factory, 
@@ -37,7 +38,7 @@ const Badge: React.FC<{ type: DealType }> = ({ type }) => {
     RENT_TO_BUY: '買取り相談可',
   };
   return (
-    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${styles[type]}`}>
+    <span className={`text-sm font-bold px-3 py-1 rounded border ${styles[type]}`}>
       {labels[type]}
     </span>
   );
@@ -56,22 +57,22 @@ const MachineCard: React.FC<{ machine: Machine; onClick: () => void }> = ({ mach
         </div>
       </div>
       <div className="p-3">
-        <div className="flex justify-between items-start mb-1">
-          <p className="text-xs text-slate-500 font-medium">{machine.manufacturer}</p>
-          <div className="flex items-center text-slate-400 text-[10px]">
-            <MapPin size={10} className="mr-0.5" />
+        <div className="flex justify-between items-start mb-1.5">
+          <p className="text-sm text-slate-500 font-medium">{machine.manufacturer}</p>
+          <div className="flex items-center text-slate-400 text-xs">
+            <MapPin size={12} className="mr-0.5" />
             {machine.location}
           </div>
         </div>
-        <h3 className="font-bold text-slate-800 text-sm mb-2 line-clamp-1">{machine.name}</h3>
-        <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
+        <h3 className="font-bold text-slate-800 text-base mb-2 line-clamp-1">{machine.name}</h3>
+        <div className="grid grid-cols-2 gap-2 text-sm text-slate-600">
           <div className="flex items-center">
-            <span className="bg-slate-100 px-1.5 py-0.5 rounded mr-1">サイズ</span>
-            {machine.size}
+            <span className="bg-slate-100 px-1.5 py-0.5 rounded mr-1 text-xs">サイズ</span>
+            <span className="whitespace-nowrap">{machine.size}</span>
           </div>
           {machine.rentHistoryCount > 0 && (
-            <div className="flex items-center text-blue-600 font-medium">
-              <ShieldCheck size={12} className="mr-1" />
+            <div className="flex items-center text-blue-600 font-semibold">
+              <ShieldCheck size={14} className="mr-1" />
               実績あり
             </div>
           )}
@@ -86,45 +87,161 @@ const Header: React.FC<{
   onLogin: () => void;
   onPost: () => void;
   onOpenMyPage: () => void;
-}> = ({ user, onLogin, onPost, onOpenMyPage }) => {
+  searchQuery: string;
+  onChangeSearch: (value: string) => void;
+  categoryFilter: 'all' | MachineCategory;
+  onChangeCategory: (value: 'all' | MachineCategory) => void;
+  areaFilter: string;
+  onChangeArea: (value: string) => void;
+}> = ({
+  user,
+  onLogin,
+  onPost,
+  onOpenMyPage,
+  searchQuery,
+  onChangeSearch,
+  categoryFilter,
+  onChangeCategory,
+  areaFilter,
+  onChangeArea,
+}) => {
+  const [isAreaOpen, setIsAreaOpen] = useState(false);
+  const selectedAreaLabel = areaFilter || '全国';
+
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-slate-200 px-4 h-16 flex items-center justify-between shadow-sm">
-      <div className="flex items-center gap-2">
-        <div className="bg-slate-900 text-white p-1.5 rounded-lg font-black tracking-tighter">K-M</div>
+    <header className="sticky top-0 z-50 bg-slate-900 text-white shadow-sm">
+      <div className="w-full px-4 py-3 flex items-center justify-between gap-3">
+        {/* 左側：ロゴ + 検索 + カテゴリ + エリア */}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          {/* ロゴ */}
+          <div className="flex items-center gap-2 flex-none">
+            <div className="bg-white text-slate-900 p-1.5 rounded-lg font-black tracking-tighter">
+              K-M
+            </div>
         <h1 className="text-lg font-bold tracking-tight hidden sm:block">K-Market</h1>
       </div>
       
-      <div className="flex items-center gap-4">
-        {user.isLoggedIn ? (
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onPost}
-              className="hidden md:flex items-center gap-1.5 text-sm font-bold bg-slate-900 text-white px-4 py-2 rounded-full hover:bg-slate-800 transition-colors"
-            >
-              <PlusCircle size={18} />
-              出品する
-            </button>
-            <button className="text-slate-600 hover:text-slate-900 relative">
-              <MessageSquare size={22} />
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">2</span>
-            </button>
+          {/* 検索 */}
+          <div className="relative w-[200px] flex-none">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              size={18}
+            />
+            <input
+              type="text"
+              placeholder="メーカー、型式、アタッチメント名..."
+              className="w-full bg-white/10 border border-white/20 rounded-full py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-white/30 transition-all"
+              value={searchQuery}
+              onChange={(e) => onChangeSearch(e.target.value)}
+            />
+          </div>
+
+          {/* カテゴリ（タブ風） */}
+          <div className="hidden md:flex items-end gap-6 flex-none">
+            {[
+              { id: 'all', label: 'すべて' },
+              { id: 'HEAVY_MACHINERY', label: '重機' },
+              { id: 'DUMP', label: 'ダンプ' },
+              { id: 'ATTACHMENT', label: 'アタッチメント' },
+            ].map((c) => {
+              const isActive = categoryFilter === c.id;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => onChangeCategory(c.id as any)}
+                  className={`relative pb-2 text-sm font-bold transition-colors ${
+                    isActive ? 'text-white' : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  {c.label}
+                  <span
+                    className={`absolute left-0 right-0 -bottom-0.5 h-0.5 rounded-full transition-all ${
+                      isActive ? 'bg-white' : 'bg-transparent'
+                    }`}
+                  />
+                </button>
+              );
+            })}
+          </div>
+
+          {/* エリア */}
+          <div className="relative hidden sm:block flex-none">
             <button
               type="button"
-              onClick={onOpenMyPage}
-              className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden border border-transparent hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300"
+              onClick={() => setIsAreaOpen((v) => !v)}
+              className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/5 px-3 py-1.5 text-[11px] sm:text-xs text-white hover:bg-white/10"
             >
-              <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
+              <span className="truncate max-w-[80px]">{selectedAreaLabel}</span>
+              <ChevronDown size={14} className="text-slate-300" />
             </button>
+
+            {isAreaOpen && (
+              <div className="absolute left-0 mt-2 w-[320px] max-h-[70vh] overflow-y-auto rounded-xl bg-slate-800 text-white shadow-xl z-50 p-3">
+                {PREFECTURE_GROUPS.map((group) => (
+                  <div key={group.label} className="mb-3 last:mb-0">
+                    <div className="text-xs font-bold bg-slate-700 px-2 py-1 rounded">
+                      {group.label}
+                    </div>
+                    <div className="mt-1 grid grid-cols-3 gap-1">
+                      {group.prefectures.map((pref) => (
+                        <button
+                          key={pref}
+                          type="button"
+                          onClick={() => {
+                            onChangeArea(pref);
+                            setIsAreaOpen(false);
+                          }}
+                          className={`text-[11px] px-2 py-1 rounded hover:bg-slate-600 text-left ${
+                            areaFilter === pref ? 'bg-slate-600 font-bold' : ''
+                          }`}
+                        >
+                          {pref}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* 右側：出品する / アイコン */}
+        <div className="flex items-center gap-3 flex-none">
+        {user.isLoggedIn ? (
+            <>
+            <button
+              onClick={onPost}
+                className="hidden md:flex items-center gap-1.5 text-xs sm:text-sm font-bold bg-white text-slate-900 px-3 py-2 rounded-full hover:bg-slate-100 transition-colors"
+            >
+                <PlusCircle size={16} />
+              出品する
+            </button>
+              <button className="hidden sm:inline-flex text-slate-200 hover:text-white relative">
+                <MessageSquare size={20} />
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
+                  2
+                </span>
+            </button>
+              <button
+                type="button"
+                onClick={onOpenMyPage}
+                className="w-8 h-8 rounded-full bg-slate-800 overflow-hidden border border-slate-600 hover:border-white focus:outline-none focus:ring-2 focus:ring-slate-400"
+              >
+                <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
+              </button>
+            </>
         ) : (
           <button 
             onClick={onLogin}
-            className="flex items-center gap-1.5 text-sm font-bold bg-slate-900 text-white px-4 py-2 rounded-full hover:bg-slate-800 transition-colors"
+              className="flex items-center gap-1.5 text-xs sm:text-sm font-bold bg-white text-slate-900 px-3 sm:px-4 py-2 rounded-full hover:bg-slate-100 transition-colors"
           >
             <LogIn size={16} />
             ログイン
           </button>
         )}
+        </div>
       </div>
     </header>
   );
@@ -133,9 +250,114 @@ const Header: React.FC<{
 const DEFAULT_THUMBNAIL =
   'https://images.pexels.com/photos/6003651/pexels-photo-6003651.jpeg?auto=compress&cs=tinysrgb&w=1200';
 
+const PREFECTURE_GROUPS: { label: string; prefectures: string[] }[] = [
+  {
+    label: '北海道・東北',
+    prefectures: ['北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県'],
+  },
+  {
+    label: '関東',
+    prefectures: ['茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県'],
+  },
+  {
+    label: '中部',
+    prefectures: ['新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県'],
+  },
+  {
+    label: '東海',
+    prefectures: ['静岡県', '愛知県', '三重県'],
+  },
+  {
+    label: '近畿',
+    prefectures: ['滋賀県', '京都府', '大阪府', '兵庫県', '奈良県', '和歌山県'],
+  },
+  {
+    label: '中国',
+    prefectures: ['鳥取県', '島根県', '岡山県', '広島県', '山口県'],
+  },
+  {
+    label: '四国',
+    prefectures: ['徳島県', '香川県', '愛媛県', '高知県'],
+  },
+  {
+    label: '九州・沖縄',
+    prefectures: ['福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'],
+  },
+];
+
 type PostImage = {
   file: File;
   previewUrl: string;
+};
+
+const MAKER_OPTIONS_BY_CATEGORY: Record<'HEAVY_MACHINERY' | 'ATTACHMENT' | 'DUMP', string[]> = {
+  HEAVY_MACHINERY: [
+    'コマツ',
+    '日立建機',
+    'コベルコ建機',
+    '住友建機',
+    'ヤンマー',
+    'クボタ',
+    '加藤製作所',
+    'タダノ',
+    '竹内製作所',
+    '北越工業（AIRMAN）',
+    '古河ロックドリル',
+    '酒井重工業',
+    '日本キャタピラー（※国内販売法人）',
+    'IHI建機',
+    '諸岡',
+  ],
+  ATTACHMENT: [
+    'オカダアイヨン',
+    'タグチ工業',
+    'NPK（日進機械）',
+    '古河ロックドリル',
+    '東空（TOKU）',
+    '丸順',
+    '松本製作所',
+    '大和機工',
+    '油圧ブレーカ工業',
+    '北川鉄工所',
+    '神鋼造機',
+    '協和機械製作所',
+    '阪神機械',
+    '杉山重機',
+    '飯田鉄工',
+    '北村製作所',
+    '幸和工業',
+    '山崎製作所',
+    '関東鉄工',
+    '明和製作所',
+    '日立建機マグネット（建機内製系）',
+    '三菱電機マグネット（磁力装置系）',
+    '住友重機械マグネット（磁力装置系）',
+    '東邦電磁工業',
+    'カネテック',
+  ],
+  DUMP: [
+    'いすゞ',
+    '日野自動車',
+    '三菱ふそう',
+    'UDトラックス',
+    'トヨタ',
+    'マツダ',
+    '日産自動車',
+    '新明和工業',
+    '極東開発工業',
+    '東邦車輌',
+    '日本トレクス',
+    '花見台自動車',
+    '森田自動車',
+    '安全自動車',
+    '小平産業',
+    '昭和飛行機工業',
+    '諸岡',
+    'コマツ',
+    '日立建機',
+    '住友建機',
+    '加藤製作所',
+  ],
 };
 
 export default function App() {
@@ -143,12 +365,15 @@ export default function App() {
   const { me, error: meError } = useMe();
   const isLoggedIn = !!me?.authUserId;
 
-  const currentUser: User = { ...MOCK_USER, isLoggedIn };
+  const avatarUrl =
+    ((me?.avatarUrl as string | null | undefined) ?? null) || MOCK_USER.avatar;
+
+  const currentUser: User = { ...MOCK_USER, isLoggedIn, avatar: avatarUrl };
   const [dbMachines, setDbMachines] = useState<Machine[]>([]);
   const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
   const [isPosting, setIsPosting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [dealFilter, setDealFilter] = useState<'all' | 'rent' | 'sale' | 'rtob'>('all');
+  const [dealFilter, setDealFilter] = useState<'all' | 'rent' | 'sale'>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | MachineCategory>('all');
   const [areaFilter, setAreaFilter] = useState('');
 
@@ -157,12 +382,12 @@ export default function App() {
     'HEAVY_MACHINERY',
   );
   const [postMaker, setPostMaker] = useState('');
-  const [postModel, setPostModel] = useState('');
+  const [postMakerSelect, setPostMakerSelect] = useState<string>('');
+  const [postTitle, setPostTitle] = useState('');
   const [postSize, setPostSize] = useState('');
   const [postPrefecture, setPostPrefecture] = useState('');
   const [postDealRental, setPostDealRental] = useState(true);
   const [postDealSale, setPostDealSale] = useState(false);
-  const [postDealRentToBuy, setPostDealRentToBuy] = useState(false);
   const [postRentalPrice, setPostRentalPrice] = useState('');
   const [postRentalUnit, setPostRentalUnit] = useState<'DAY' | 'MONTH'>('DAY');
   const [postSalePrice, setPostSalePrice] = useState('');
@@ -171,15 +396,15 @@ export default function App() {
   const [postMinPeriod, setPostMinPeriod] = useState('');
   const [postMinPeriodUnit, setPostMinPeriodUnit] = useState<'DAY' | 'MONTH'>('DAY');
   const [postAvailableFrom, setPostAvailableFrom] = useState('');
-  const [postUsageType, setPostUsageType] = useState('');
-  const [postSiteScale, setPostSiteScale] = useState('');
-  const [postHistory, setPostHistory] = useState('');
+  const [postUsageNote, setPostUsageNote] = useState('');
   const [postImages, setPostImages] = useState<PostImage[]>([]);
   const [postSubmitting, setPostSubmitting] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
   const [postMessage, setPostMessage] = useState<string | null>(null);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const makerOptions = MAKER_OPTIONS_BY_CATEGORY[postCategory];
 
   const filteredMachines = dbMachines.filter((m) => {
     const q = searchQuery.trim().toLowerCase();
@@ -194,9 +419,7 @@ export default function App() {
         ? true
         : dealFilter === 'rent'
         ? m.dealTypes.includes('RENTAL')
-        : dealFilter === 'sale'
-        ? m.dealTypes.includes('SALE')
-        : m.dealTypes.includes('RENT_TO_BUY');
+        : m.dealTypes.includes('SALE');
 
     const matchesCategory =
       categoryFilter === 'all' ? true : m.category === (categoryFilter as MachineCategory);
@@ -307,16 +530,16 @@ export default function App() {
       setPostError('写真を1枚以上アップロードしてください。');
       return;
     }
+    if (!postTitle.trim()) {
+      setPostError('タイトルを入力してください。');
+      return;
+    }
     if (!postPrefecture.trim()) {
       setPostError('都道府県を入力してください。');
       return;
     }
     if (!postMaker.trim()) {
       setPostError('メーカーを入力してください。');
-      return;
-    }
-    if (!postModel.trim()) {
-      setPostError('型式を入力してください。');
       return;
     }
     if (!postSize.trim()) {
@@ -332,16 +555,16 @@ export default function App() {
       return;
     }
 
-    const hasAnyDeal = postDealRental || postDealSale || postDealRentToBuy;
+    const hasAnyDeal = postDealRental || postDealSale;
     if (!hasAnyDeal) {
       setPostError('取引形態を少なくとも1つ選択してください。');
       return;
     }
-    if ((postDealRental || postDealRentToBuy) && postRentalPrice.trim() === '') {
+    if (postDealRental && postRentalPrice.trim() === '') {
       setPostError('レンタル金額（税込）を入力してください。');
       return;
     }
-    if ((postDealSale || postDealRentToBuy) && postSalePrice.trim() === '') {
+    if (postDealSale && postSalePrice.trim() === '') {
       setPostError('売買参考価格（税込）を入力してください。');
       return;
     }
@@ -350,12 +573,15 @@ export default function App() {
     setPostError(null);
     setPostMessage(null);
 
+    const normalizeNumber = (v: string) => {
+      const digits = v.replace(/,/g, '').trim();
+      return digits ? Number(digits) : null;
+    };
+
     const rentalPriceNumber =
-      postDealRental && postRentalPrice.trim() !== '' ? Number(postRentalPrice) : null;
+      postDealRental && postRentalPrice.trim() !== '' ? normalizeNumber(postRentalPrice) : null;
     const salePriceNumber =
-      (postDealSale || postDealRentToBuy) && postSalePrice.trim() !== ''
-        ? Number(postSalePrice)
-        : null;
+      postDealSale && postSalePrice.trim() !== '' ? normalizeNumber(postSalePrice) : null;
     const hoursNumber = postHours.trim() !== '' ? Number(postHours) : null;
     const conditionNumber = postCondition ? Number(postCondition) : null;
     const minPeriodNumber = postMinPeriod.trim() !== '' ? Number(postMinPeriod) : null;
@@ -399,14 +625,14 @@ export default function App() {
 
     const { error } = await supabase.from('machines').insert({
       owner_company_id: me.company.id,
-      title: `${postMaker} ${postModel}`.trim() || '無題の出品',
+      title: postTitle.trim(),
       category: postCategory,
       maker: postMaker || null,
-      model: postModel || null,
+      model: null,
       machine_class: postSize || null,
       spec_note: null,
       rental_enabled: postDealRental,
-      sale_enabled: postDealSale || postDealRentToBuy,
+      sale_enabled: postDealSale,
       rental_price_daily: rentalPriceNumber,
       rental_price_unit: postRentalUnit,
       rental_min_period: minPeriodNumber,
@@ -420,9 +646,9 @@ export default function App() {
       operating_hours: hoursNumber,
       condition: conditionNumber,
       available_from: availableFromDate,
-      usage_type: postUsageType || null,
-      site_scale: postSiteScale || null,
-      history: postHistory || null,
+      usage_type: postUsageNote || null,
+      site_scale: null,
+      history: null,
     });
 
     if (error) {
@@ -489,7 +715,7 @@ export default function App() {
         if (row.rental_enabled) dealTypes.push('RENTAL');
         if (row.sale_enabled) dealTypes.push('SALE');
 
-        const location = [row.location_prefecture, row.location_city].filter(Boolean).join(' ');
+        const location = row.location_prefecture || '';
         const thumbnail = (row.main_image_url as string | null) || DEFAULT_THUMBNAIL;
 
         const imageUrls = (row.image_urls as string[] | null) ?? [];
@@ -590,72 +816,23 @@ export default function App() {
         onLogin={handleLogin}
         onPost={handleOpenPost}
         onOpenMyPage={handleOpenMyPage}
+        searchQuery={searchQuery}
+        onChangeSearch={setSearchQuery}
+        categoryFilter={categoryFilter}
+        onChangeCategory={setCategoryFilter}
+        areaFilter={areaFilter}
+        onChangeArea={setAreaFilter}
       />
 
       <main className="max-w-5xl mx-auto px-4 py-6">
-        {/* Search & Intro */}
-        <section className="mb-8">
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl text-white mb-6">
-            <h2 className="text-xl font-bold mb-2">解体現場を、もっと効率的に。</h2>
-            <p className="text-slate-300 text-sm mb-6">重機・ダンプ・アタッチメントの「借りる・買う」を直接つなぐB2Bマーケット</p>
-            <div className="space-y-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input 
-                type="text" 
-                placeholder="メーカー、型式、アタッチメント名..."
-                className="w-full bg-white/10 border border-white/20 rounded-xl py-3 pl-10 pr-4 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-white/30 transition-all"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-200 whitespace-nowrap">カテゴリ</span>
-                  <div className="flex flex-wrap gap-1">
-                    {[
-                      { id: 'all', label: 'すべて' },
-                      { id: 'HEAVY_MACHINERY', label: '重機' },
-                      { id: 'DUMP', label: 'ダンプ' },
-                      { id: 'ATTACHMENT', label: 'アタッチメント' },
-                    ].map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => setCategoryFilter(c.id as any)}
-                        className={`px-2 py-1 rounded-full border text-[11px] font-bold ${
-                          categoryFilter === c.id
-                            ? 'bg-white text-slate-900 border-white'
-                            : 'bg-white/5 text-slate-200 border-white/20'
-                        }`}
-                      >
-                        {c.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-200 whitespace-nowrap">エリア</span>
-                  <input
-                    type="text"
-                    placeholder="都道府県・市区町村"
-                    className="flex-1 rounded-full border border-white/20 bg-white/5 px-3 py-2 text-xs text-white placeholder:text-slate-300 focus:outline-none focus:ring-1 focus:ring-white/40"
-                    value={areaFilter}
-                    onChange={(e) => setAreaFilter(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Filter Tabs (取引形態） */}
+        <section className="mb-6">
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
             {[
               { id: 'all', label: 'すべて' },
               { id: 'rent', label: 'レンタル' },
               { id: 'sale', label: '売買' },
-              { id: 'rtob', label: 'レンタル→買取り可' }
-            ].map(tab => (
+            ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setDealFilter(tab.id as any)}
@@ -747,17 +924,9 @@ export default function App() {
               </div>
 
               {/* Spec Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
                 {[
                   { label: 'サイズ', value: selectedMachine.size || '-' },
-                  {
-                    label: '年式',
-                    value: currentUser.isLoggedIn
-                      ? selectedMachine.yearOfManufacture
-                        ? `${selectedMachine.yearOfManufacture}年`
-                        : '未設定'
-                      : 'ログイン後',
-                  },
                   {
                     label: '稼働時間',
                     value: currentUser.isLoggedIn
@@ -776,7 +945,9 @@ export default function App() {
                   },
                 ].map((item, i) => (
                   <div key={i} className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                    <p className="text-[10px] text-slate-400 font-bold mb-1 uppercase tracking-wider">{item.label}</p>
+                    <p className="text-[10px] text-slate-400 font-bold mb-1 uppercase tracking-wider">
+                      {item.label}
+                    </p>
                     <p className="text-sm font-bold text-slate-800">{item.value}</p>
                   </div>
                 ))}
@@ -854,10 +1025,26 @@ export default function App() {
           <div className="relative bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
             <h2 className="text-xl font-bold mb-4">重機・ダンプを出品する</h2>
             <form className="space-y-4" onSubmit={handleSubmitPost}>
+              {/* タイトル（必須） */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">
+                  タイトル
+                  <span className="ml-1 text-red-500 align-middle">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="コベルコ 0.45m3 油圧ショベル"
+                  className="w-full border border-slate-200 rounded-lg p-3 text-sm"
+                  value={postTitle}
+                  onChange={(e) => setPostTitle(e.target.value)}
+                />
+              </div>
+
               {/* 写真（必須・最大5枚） */}
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-1">
-                  写真（最大5枚・スマホ/PCからアップロード） <span className="text-red-500">*</span>
+                  写真（最大5枚・スマホ/PCからアップロード）
+                  <span className="ml-1 text-red-500 align-middle">*</span>
                 </label>
                 {postImages.length === 0 ? (
                   <button
@@ -916,70 +1103,137 @@ export default function App() {
               </div>
 
               {/* 都道府県 */}
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">
-                  都道府県（必須）
+              <div className="flex items-center gap-3 border-t border-b border-slate-200 py-3 mt-2">
+                <label className="flex items-center gap-1 text-xs font-bold text-slate-500 whitespace-nowrap">
+                  <span>都道府県</span>
+                  <span className="text-red-500 align-middle">*</span>
                 </label>
-                <input
-                  type="text"
-                  placeholder="例：東京都"
-                  className="w-full border border-slate-200 rounded-lg p-3 text-sm"
+                <select
+                  className="flex-1 bg-transparent border-none text-right text-sm text-slate-900 focus:outline-none focus:ring-0"
                   value={postPrefecture}
                   onChange={(e) => setPostPrefecture(e.target.value)}
-                />
+                >
+                  <option value="">選択してください</option>
+                  <option value="北海道">北海道</option>
+                  <option value="青森県">青森県</option>
+                  <option value="岩手県">岩手県</option>
+                  <option value="宮城県">宮城県</option>
+                  <option value="秋田県">秋田県</option>
+                  <option value="山形県">山形県</option>
+                  <option value="福島県">福島県</option>
+                  <option value="茨城県">茨城県</option>
+                  <option value="栃木県">栃木県</option>
+                  <option value="群馬県">群馬県</option>
+                  <option value="埼玉県">埼玉県</option>
+                  <option value="千葉県">千葉県</option>
+                  <option value="東京都">東京都</option>
+                  <option value="神奈川県">神奈川県</option>
+                  <option value="新潟県">新潟県</option>
+                  <option value="富山県">富山県</option>
+                  <option value="石川県">石川県</option>
+                  <option value="福井県">福井県</option>
+                  <option value="山梨県">山梨県</option>
+                  <option value="長野県">長野県</option>
+                  <option value="岐阜県">岐阜県</option>
+                  <option value="静岡県">静岡県</option>
+                  <option value="愛知県">愛知県</option>
+                  <option value="三重県">三重県</option>
+                  <option value="滋賀県">滋賀県</option>
+                  <option value="京都府">京都府</option>
+                  <option value="大阪府">大阪府</option>
+                  <option value="兵庫県">兵庫県</option>
+                  <option value="奈良県">奈良県</option>
+                  <option value="和歌山県">和歌山県</option>
+                  <option value="鳥取県">鳥取県</option>
+                  <option value="島根県">島根県</option>
+                  <option value="岡山県">岡山県</option>
+                  <option value="広島県">広島県</option>
+                  <option value="山口県">山口県</option>
+                  <option value="徳島県">徳島県</option>
+                  <option value="香川県">香川県</option>
+                  <option value="愛媛県">愛媛県</option>
+                  <option value="高知県">高知県</option>
+                  <option value="福岡県">福岡県</option>
+                  <option value="佐賀県">佐賀県</option>
+                  <option value="長崎県">長崎県</option>
+                  <option value="熊本県">熊本県</option>
+                  <option value="大分県">大分県</option>
+                  <option value="宮崎県">宮崎県</option>
+                  <option value="鹿児島県">鹿児島県</option>
+                  <option value="沖縄県">沖縄県</option>
+                </select>
               </div>
 
               {/* 商材カテゴリー */}
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">
-                  商材カテゴリー（必須）
+              <div className="flex items-center gap-3 border-b border-slate-200 py-3">
+                <label className="flex items-center gap-1 text-xs font-bold text-slate-500 whitespace-nowrap">
+                  <span>商材カテゴリー</span>
+                  <span className="text-red-500 align-middle">*</span>
                 </label>
                 <select
-                  className="w-full border border-slate-200 rounded-lg p-3 text-sm"
+                  className="flex-1 bg-transparent border-none text-right text-sm text-slate-900 focus:outline-none focus:ring-0"
                   value={postCategory}
-                  onChange={(e) =>
-                    setPostCategory(e.target.value as 'HEAVY_MACHINERY' | 'DUMP' | 'ATTACHMENT')
-                  }
+                  onChange={(e) => {
+                    const next = e.target.value as 'HEAVY_MACHINERY' | 'DUMP' | 'ATTACHMENT';
+                    setPostCategory(next);
+                    setPostMaker('');
+                    setPostMakerSelect('');
+                  }}
                 >
-                  <option value="HEAVY_MACHINERY">解体用重機</option>
+                  <option value="HEAVY_MACHINERY">重機</option>
                   <option value="DUMP">ダンプ</option>
                   <option value="ATTACHMENT">アタッチメント</option>
                 </select>
               </div>
 
               {/* メーカー */}
-                <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">
-                  メーカー（必須）
-                </label>
-                <input
-                  type="text"
-                  placeholder="例：コマツ"
-                  className="w-full border border-slate-200 rounded-lg p-3 text-sm"
-                  value={postMaker}
-                  onChange={(e) => setPostMaker(e.target.value)}
-                />
+              <div className="border-b border-slate-200 py-3">
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-1 text-xs font-bold text-slate-500 whitespace-nowrap">
+                    <span>メーカー</span>
+                    <span className="text-red-500 align-middle">*</span>
+                  </label>
+                  <select
+                    className="flex-1 bg-transparent border-none text-right text-sm text-slate-900 focus:outline-none focus:ring-0"
+                    value={postMakerSelect}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setPostMakerSelect(value);
+                      if (value === 'OTHER') {
+                        setPostMaker('');
+                      } else {
+                        setPostMaker(value);
+                      }
+                    }}
+                  >
+                    <option value="">選択してください</option>
+                    {makerOptions.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                    <option value="OTHER">その他</option>
+                  </select>
                 </div>
-
-              {/* 型式 */}
-                <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">型式（必須）</label>
-                <input
-                  type="text"
-                  placeholder="例：PC128US-11"
-                  className="w-full border border-slate-200 rounded-lg p-3 text-sm"
-                  value={postModel}
-                  onChange={(e) => setPostModel(e.target.value)}
-                />
+                {postMakerSelect === 'OTHER' && (
+                  <input
+                    type="text"
+                    placeholder="その他メーカー名を入力"
+                    className="mt-2 w-full border border-slate-200 rounded-lg p-3 text-sm"
+                    value={postMaker}
+                    onChange={(e) => setPostMaker(e.target.value)}
+                  />
+                )}
                 </div>
 
               {/* サイズ */}
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">
-                  サイズ（必須）
+              <div className="flex items-center gap-3 border-b border-slate-200 py-3">
+                <label className="flex items-center gap-1 text-xs font-bold text-slate-500 whitespace-nowrap">
+                  <span>サイズ</span>
+                  <span className="text-red-500 align-middle">*</span>
                 </label>
                 <select
-                  className="w-full border border-slate-200 rounded-lg p-3 text-sm"
+                  className="flex-1 bg-transparent border-none text-right text-sm text-slate-900 focus:outline-none focus:ring-0"
                   value={postSize}
                   onChange={(e) => setPostSize(e.target.value)}
                 >
@@ -996,34 +1250,37 @@ export default function App() {
               </div>
 
               {/* 稼働時間 */}
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">
-                  稼働時間（h・必須）
+              <div className="flex items-center gap-3 border-b border-slate-200 py-3">
+                <label className="flex items-center gap-1 text-xs font-bold text-slate-500 whitespace-nowrap">
+                  <span>稼働時間（h）</span>
+                  <span className="text-red-500 align-middle">*</span>
                 </label>
-                <select
-                  className="w-full border border-slate-200 rounded-lg p-3 text-sm"
-                  value={postHours}
-                  onChange={(e) => setPostHours(e.target.value)}
-                >
-                  <option value="">選択してください</option>
-                  <option value="500">〜500h</option>
-                  <option value="1000">〜1,000h</option>
-                  <option value="2000">〜2,000h</option>
-                  <option value="3000">〜3,000h</option>
-                  <option value="5000">〜5,000h</option>
-                  <option value="8000">〜8,000h</option>
-                  <option value="10000">10,000h以上</option>
-                </select>
-                <p className="mt-1 text-[11px] text-slate-500">おおよその値で構いません。</p>
+                <div className="flex-1">
+                  <select
+                    className="w-full bg-transparent border-none text-right text-sm text-slate-900 focus:outline-none focus:ring-0"
+                    value={postHours}
+                    onChange={(e) => setPostHours(e.target.value)}
+                  >
+                    <option value="">選択してください</option>
+                    <option value="500">〜500h</option>
+                    <option value="1000">〜1,000h</option>
+                    <option value="2000">〜2,000h</option>
+                    <option value="3000">〜3,000h</option>
+                    <option value="5000">〜5,000h</option>
+                    <option value="8000">〜8,000h</option>
+                    <option value="10000">10,000h以上</option>
+                  </select>
+                </div>
               </div>
 
               {/* 状態 */}
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">
-                  状態（1〜5・必須）
+              <div className="flex items-center gap-3 border-b border-slate-200 py-3">
+                <label className="flex items-center gap-1 text-xs font-bold text-slate-500 whitespace-nowrap">
+                  <span>状態（1〜5）</span>
+                  <span className="text-red-500 align-middle">*</span>
                 </label>
                 <select
-                  className="w-full border border-slate-200 rounded-lg p-3 text-sm"
+                  className="flex-1 bg-transparent border-none text-right text-sm text-slate-900 focus:outline-none focus:ring-0"
                   value={postCondition}
                   onChange={(e) =>
                     setPostCondition(e.target.value as '1' | '2' | '3' | '4' | '5' | '')
@@ -1036,41 +1293,29 @@ export default function App() {
                   <option value="2">2（やや劣る）</option>
                   <option value="1">1（悪い）</option>
                 </select>
-              </div>
+                </div>
 
               {/* 使用用途・現場情報 */}
-              <div>
+                <div>
                 <label className="block text-xs font-bold text-slate-500 mb-1">
                   使用用途・現場情報（任意）
                 </label>
-                <div className="grid grid-cols-1 gap-3">
-                  <input
-                    type="text"
-                    placeholder="主な使用用途（例：RC造解体、木造解体など）"
-                    className="w-full border border-slate-200 rounded-lg p-3 text-sm"
-                    value={postUsageType}
-                    onChange={(e) => setPostUsageType(e.target.value)}
-                  />
-                  <input
-                    type="text"
-                    placeholder="現場規模（例：戸建て中心、中・大規模案件など）"
-                    className="w-full border border-slate-200 rounded-lg p-3 text-sm"
-                    value={postSiteScale}
-                    onChange={(e) => setPostSiteScale(e.target.value)}
-                  />
-                  <textarea
-                    placeholder="修理・故障履歴など（任意）"
-                    className="w-full border border-slate-200 rounded-lg p-3 text-sm min-h-[80px]"
-                    value={postHistory}
-                    onChange={(e) => setPostHistory(e.target.value)}
+                <textarea
+                  placeholder="主な使用用途・現場規模・修理履歴など（自由記述）"
+                  className="w-full border border-slate-200 rounded-lg p-3 text-sm min-h-[100px]"
+                  value={postUsageNote}
+                  onChange={(e) => setPostUsageNote(e.target.value)}
                   />
                 </div>
-              </div>
+
+              {/* 区切り線（取引形態の直前） */}
+              <div className="mt-6 mb-4 h-px bg-slate-200" />
 
               {/* 取引形態 */}
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">
-                  取引形態（複数選択可）
+                <label className="flex items-center gap-1 text-xs font-bold text-slate-500 mb-1">
+                  <span>取引形態（複数選択可）</span>
+                  <span className="text-red-500 align-middle">*</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
                   <label className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 cursor-pointer text-sm">
@@ -1081,7 +1326,7 @@ export default function App() {
                       onChange={(e) => setPostDealRental(e.target.checked)}
                     />
                     レンタル
-                    </label>
+                  </label>
                   <label className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 cursor-pointer text-sm">
                     <input
                       type="checkbox"
@@ -1091,33 +1336,30 @@ export default function App() {
                     />
                     売買
                   </label>
-                  <label className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 cursor-pointer text-sm">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4"
-                      checked={postDealRentToBuy}
-                      onChange={(e) => setPostDealRentToBuy(e.target.checked)}
-                    />
-                    レンタル後の買取り可
-                  </label>
                 </div>
               </div>
 
               {/* レンタル条件 */}
-              {(postDealRental || postDealRentToBuy) && (
+              {postDealRental && (
                 <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">
-                      レンタル金額（税込・必須）
+                  {/* レンタル金額（メイン） */}
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-1 text-xs font-bold text-slate-500 whitespace-nowrap">
+                      <span>レンタル金額（税込）</span>
+                      <span className="text-red-500 align-middle">*</span>
                     </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="number"
-                        min={0}
+                    <div className="flex flex-1 gap-2">
+                    <input
+                        type="text"
+                        inputMode="numeric"
                         className="w-full border border-slate-200 rounded-lg p-3 text-sm"
-                        placeholder="例：18000"
+                        placeholder="例：18,000"
                         value={postRentalPrice}
-                        onChange={(e) => setPostRentalPrice(e.target.value)}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/[^\d]/g, '');
+                          const formatted = raw.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                          setPostRentalPrice(formatted);
+                        }}
                       />
                       <select
                         className="w-24 border border-slate-200 rounded-lg p-2 text-xs"
@@ -1129,60 +1371,70 @@ export default function App() {
                         <option value="DAY">日額</option>
                         <option value="MONTH">月額</option>
                       </select>
+                </div>
+              </div>
+
+                  {/* レンタルの補足条件（サブ） */}
+                  <div className="space-y-2 pl-2">
+                    <div className="rounded-lg bg-slate-50 px-3 py-3">
+                      <label className="block text-[11px] font-bold text-slate-500 mb-1">
+                        - 最低レンタル期間（任意）
+                  </label>
+                      <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    className="w-full border border-slate-200 rounded-lg p-3 text-sm"
+                          placeholder="例：7"
+                          value={postMinPeriod}
+                          onChange={(e) => setPostMinPeriod(e.target.value)}
+                        />
+                        <select
+                          className="w-24 border border-slate-200 rounded-lg p-2 text-xs"
+                          value={postMinPeriodUnit}
+                          onChange={(e) =>
+                            setPostMinPeriodUnit(e.target.value as 'DAY' | 'MONTH')
+                          }
+                        >
+                          <option value="DAY">日</option>
+                          <option value="MONTH">ヶ月</option>
+                        </select>
+                </div>
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">
-                      最低レンタル期間（任意）
-                    </label>
-                    <div className="flex gap-2">
+
+                    <div className="rounded-lg bg-slate-50 px-3 py-3">
+                      <label className="block text-[11px] font-bold text-slate-500 mb-1">
+                        - 利用可能開始日（任意）
+                      </label>
                       <input
-                        type="number"
-                        min={0}
+                        type="date"
                         className="w-full border border-slate-200 rounded-lg p-3 text-sm"
-                        placeholder="例：7"
-                        value={postMinPeriod}
-                        onChange={(e) => setPostMinPeriod(e.target.value)}
+                        value={postAvailableFrom}
+                        onChange={(e) => setPostAvailableFrom(e.target.value)}
                       />
-                      <select
-                        className="w-24 border border-slate-200 rounded-lg p-2 text-xs"
-                        value={postMinPeriodUnit}
-                        onChange={(e) =>
-                          setPostMinPeriodUnit(e.target.value as 'DAY' | 'MONTH')
-                        }
-                      >
-                        <option value="DAY">日</option>
-                        <option value="MONTH">ヶ月</option>
-                      </select>
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">
-                      利用可能開始日（任意）
-                    </label>
-                    <input
-                      type="date"
-                      className="w-full border border-slate-200 rounded-lg p-3 text-sm"
-                      value={postAvailableFrom}
-                      onChange={(e) => setPostAvailableFrom(e.target.value)}
-                    />
                   </div>
                 </div>
               )}
 
               {/* 売買条件 */}
-              {(postDealSale || postDealRentToBuy) && (
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">
-                    売買参考価格（税込・必須）
+              {postDealSale && (
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-1 text-xs font-bold text-slate-500 whitespace-nowrap">
+                    <span>売買参考価格（税込）</span>
+                    <span className="text-red-500 align-middle">*</span>
                   </label>
                   <input
-                    type="number"
-                    min={0}
-                    className="w-full border border-slate-200 rounded-lg p-3 text-sm"
-                    placeholder="例：8500000"
+                    type="text"
+                    inputMode="numeric"
+                    className="flex-1 border border-slate-200 rounded-lg p-3 text-sm"
+                    placeholder="例：8,500,000"
                     value={postSalePrice}
-                    onChange={(e) => setPostSalePrice(e.target.value)}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/[^\d]/g, '');
+                      const formatted = raw.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                      setPostSalePrice(formatted);
+                    }}
                   />
                 </div>
               )}
@@ -1199,20 +1451,20 @@ export default function App() {
               )}
 
               <div className="flex gap-3 pt-2">
-              <button 
-                type="button"
+                <button
+                  type="button"
                   className="flex-1 border border-slate-200 rounded-xl py-3 text-sm font-bold text-slate-600 hover:bg-slate-50"
-                onClick={() => setIsPosting(false)}
-              >
+                  onClick={() => setIsPosting(false)}
+                >
                   キャンセル
-              </button>
+                </button>
                 <button
                   type="submit"
                   disabled={postSubmitting}
                   className="flex-1 bg-slate-900 text-white font-bold py-3 rounded-xl disabled:opacity-60"
                 >
                   {postSubmitting ? '登録中…' : '出品を登録する'}
-              </button>
+                </button>
               </div>
             </form>
           </div>
@@ -1244,37 +1496,6 @@ export default function App() {
           <span className="text-[10px] font-bold">マイページ</span>
         </button>
       </nav>
-
-      {/* Footer (Desktop) */}
-      <footer className="hidden lg:block bg-white border-t border-slate-200 py-12 mt-12">
-        <div className="max-w-5xl mx-auto px-4 grid grid-cols-4 gap-8">
-          <div className="col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="bg-slate-900 text-white p-1.5 rounded-lg font-black tracking-tighter">K-M</div>
-              <h1 className="text-xl font-bold tracking-tight">K-Market</h1>
-            </div>
-            <p className="text-sm text-slate-500 max-w-sm">解体業界における「借りる・買う」の流動性を高め、資産の有効活用と現場の生産性向上を支援するプラットフォームです。</p>
-          </div>
-          <div>
-            <h4 className="font-bold text-slate-800 mb-4 text-sm">カテゴリー</h4>
-            <ul className="text-sm text-slate-500 space-y-2">
-              <li>解体用重機</li>
-              <li>ダンプカー</li>
-              <li>アタッチメント</li>
-              <li>「探しています」投稿</li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-bold text-slate-800 mb-4 text-sm">サポート</h4>
-            <ul className="text-sm text-slate-500 space-y-2">
-              <li>利用規約</li>
-              <li>プライバシーポリシー</li>
-              <li>お問い合わせ</li>
-              <li>運営会社</li>
-            </ul>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
