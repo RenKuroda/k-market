@@ -11,6 +11,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ja">
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         {/* Tailwind CDN（MVP段階ではCDN利用。将来的にビルド型Tailwindへ移行予定） */}
         <script src="https://cdn.tailwindcss.com" />
       </head>

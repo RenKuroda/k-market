@@ -29,6 +29,7 @@ export interface Machine {
   sellerId: string;
   rentHistoryCount: number;
   minRentPeriod?: string;
+  availableFrom?: string | null;
 }
 
 export interface User {

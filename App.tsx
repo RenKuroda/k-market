@@ -1,28 +1,30 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { MOCK_USER } from './constants';
 import { Machine, User, DealType, MachineCategory } from './types';
 import { supabase } from './lib/supabaseClient';
 import { useMe } from './lib/useMe';
-import { 
-  Search, 
-  Menu, 
-  LogIn, 
-  PlusCircle, 
-  MessageSquare, 
-  User as UserIcon, 
-  ChevronRight, 
+import {
+  Search,
+  Menu,
+  LogIn,
+  PlusCircle,
+  MessageSquare,
+  User as UserIcon,
+  ChevronRight,
   ChevronDown,
-  History, 
-  MapPin, 
-  Factory, 
+  History,
+  MapPin,
+  Factory,
   ShieldCheck,
   Star,
   Lock,
   ArrowRightCircle,
-  X
+  X,
+  Home,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 // Components
@@ -38,13 +40,29 @@ const Badge: React.FC<{ type: DealType }> = ({ type }) => {
     RENT_TO_BUY: '買取り相談可',
   };
   return (
-    <span className={`text-sm font-bold px-3 py-1 rounded border ${styles[type]}`}>
+    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${styles[type]}`}>
       {labels[type]}
     </span>
   );
 };
 
 const MachineCard: React.FC<{ machine: Machine; onClick: () => void }> = ({ machine, onClick }) => {
+  // 金額の「◯◯万」表記に整形するヘルパー
+  const formatPriceMan = (value?: number | null) => {
+    if (value == null) return null;
+    const man = Math.round(value / 10000);
+    if (!Number.isFinite(man)) return null;
+    return `¥${man.toLocaleString('ja-JP')}万`;
+  };
+
+  // 下部2行の金額テキスト
+  const rentalDisplayPrice = machine.dealTypes.includes('RENTAL')
+    ? formatPriceMan(machine.priceRental ?? null)
+    : null;
+  const saleDisplayPrice = machine.dealTypes.includes('SALE')
+    ? formatPriceMan(machine.priceSale ?? null)
+    : null;
+
   return (
     <div 
       onClick={onClick}
@@ -52,30 +70,84 @@ const MachineCard: React.FC<{ machine: Machine; onClick: () => void }> = ({ mach
     >
       <div className="relative aspect-[4/3]">
         <img src={machine.thumbnail} alt={machine.name} className="w-full h-full object-cover" />
-        <div className="absolute top-2 left-2 flex flex-col gap-1">
-          {machine.dealTypes.map(t => <Badge key={t} type={t} />)}
-        </div>
       </div>
       <div className="p-3">
-        <div className="flex justify-between items-start mb-1.5">
-          <p className="text-sm text-slate-500 font-medium">{machine.manufacturer}</p>
-          <div className="flex items-center text-slate-400 text-xs">
-            <MapPin size={12} className="mr-0.5" />
-            {machine.location}
-          </div>
-        </div>
-        <h3 className="font-bold text-slate-800 text-base mb-2 line-clamp-1">{machine.name}</h3>
-        <div className="grid grid-cols-2 gap-2 text-sm text-slate-600">
-          <div className="flex items-center">
-            <span className="bg-slate-100 px-1.5 py-0.5 rounded mr-1 text-xs">サイズ</span>
-            <span className="whitespace-nowrap">{machine.size}</span>
-          </div>
+        {/* 1行目：タイトル */}
+        <div className="flex items-start justify-between mb-1.5">
+          <h3 className="font-bold text-slate-800 text-base sm:text-lg line-clamp-1">
+            {machine.name}
+          </h3>
           {machine.rentHistoryCount > 0 && (
-            <div className="flex items-center text-blue-600 font-semibold">
+            <div className="ml-2 flex items-center text-xs font-semibold text-blue-600 whitespace-nowrap">
               <ShieldCheck size={14} className="mr-1" />
               実績あり
             </div>
           )}
+        </div>
+
+        {/* 2行目：サイズ | 都道府県（1行で収まるよう小さめに） */}
+        <div className="mb-2 text-[11px] text-slate-500 flex items-center whitespace-nowrap">
+          <span className="whitespace-nowrap">
+            サイズ <span className="font-semibold text-slate-700">{machine.size}</span>
+          </span>
+          <span className="mx-1 text-slate-300">|</span>
+          <span className="inline-flex items-center text-slate-500 whitespace-nowrap">
+            <MapPin size={11} className="mr-0.5 text-slate-400" />
+            {machine.location}
+          </span>
+        </div>
+
+        {/* 3行目：金額ブロック（PC/タブレットのみ表示） */}
+        {(machine.priceRental != null || machine.priceSale != null) && (
+          <>
+            <div className="bg-slate-900 text-white p-3 rounded-xl hidden sm:block">
+              {machine.priceRental != null && (
+                <div
+                  className={`flex justify-between items-baseline ${
+                    machine.priceSale != null ? 'mb-1.5' : ''
+                  }`}
+                >
+                  <span className="text-sm font-semibold text-slate-200 whitespace-nowrap">
+                    レンタル目安
+                    {machine.rentalUnit === 'MONTH'
+                      ? '（月額）'
+                      : machine.rentalUnit === 'DAY'
+                      ? '（日額）'
+                      : ''}
+                  </span>
+                  <span className="text-xl font-black whitespace-nowrap">
+                    ¥{machine.priceRental.toLocaleString()}
+                    <span className="text-xs font-normal">〜</span>
+                  </span>
+                </div>
+              )}
+              {machine.priceSale != null && (
+                <div className="flex justify-between items-baseline border-t border-white/10 pt-1.5 mt-1.5">
+                  <span className="text-sm font-semibold text-slate-200">売買参考価格</span>
+                  <span className="text-xl font-black">
+                    ¥{machine.priceSale.toLocaleString()}
+                    <span className="text-xs font-normal">〜</span>
+                  </span>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* 最下部：レンタル可 / 売買可（2行固定・濃い紺色の帯）※PC版では非表示 */}
+        <div className="mt-3 -mx-3 -mb-3 bg-slate-900 text-white text-[11px] px-3 py-2 space-y-1 lg:hidden">
+          <div className="flex items-baseline justify-between">
+            <span className="font-semibold text-slate-200">レンタル可：</span>
+            <span className="font-bold">
+              {rentalDisplayPrice ? `${rentalDisplayPrice}〜` : '-'}
+            </span>
+          </div>
+          <div className="flex items-baseline justify-between">
+            <span className="font-semibold text-slate-200">売買可：</span>
+            <span className="font-bold">
+              {saleDisplayPrice ? `${saleDisplayPrice}〜` : '-'}
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -91,8 +163,6 @@ const Header: React.FC<{
   onChangeSearch: (value: string) => void;
   categoryFilter: 'all' | MachineCategory;
   onChangeCategory: (value: 'all' | MachineCategory) => void;
-  areaFilter: string;
-  onChangeArea: (value: string) => void;
 }> = ({
   user,
   onLogin,
@@ -102,17 +172,12 @@ const Header: React.FC<{
   onChangeSearch,
   categoryFilter,
   onChangeCategory,
-  areaFilter,
-  onChangeArea,
 }) => {
-  const [isAreaOpen, setIsAreaOpen] = useState(false);
-  const selectedAreaLabel = areaFilter || '全国';
-
   return (
     <header className="sticky top-0 z-50 bg-slate-900 text-white shadow-sm">
       <div className="w-full px-4 py-3 flex items-center justify-between gap-3">
         {/* 左側：ロゴ + 検索 + カテゴリ + エリア */}
-        <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div className="flex items-center gap-10 flex-1 min-w-0">
           {/* ロゴ */}
           <div className="flex items-center gap-2 flex-none">
             <div className="bg-white text-slate-900 p-1.5 rounded-lg font-black tracking-tighter">
@@ -122,7 +187,7 @@ const Header: React.FC<{
       </div>
       
           {/* 検索 */}
-          <div className="relative w-[200px] flex-none">
+          <div className="relative w-[300px] flex-none">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
               size={18}
@@ -150,7 +215,7 @@ const Header: React.FC<{
                   key={c.id}
                   type="button"
                   onClick={() => onChangeCategory(c.id as any)}
-                  className={`relative pb-2 text-sm font-bold transition-colors ${
+                  className={`relative pb-2 text-base font-bold transition-colors ${
                     isActive ? 'text-white' : 'text-slate-300 hover:text-white'
                   }`}
                 >
@@ -163,47 +228,6 @@ const Header: React.FC<{
             </button>
               );
             })}
-            </div>
-
-          {/* エリア */}
-          <div className="relative hidden sm:block flex-none">
-            <button
-              type="button"
-              onClick={() => setIsAreaOpen((v) => !v)}
-              className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/5 px-3 py-1.5 text-[11px] sm:text-xs text-white hover:bg-white/10"
-            >
-              <span className="truncate max-w-[80px]">{selectedAreaLabel}</span>
-              <ChevronDown size={14} className="text-slate-300" />
-            </button>
-
-            {isAreaOpen && (
-              <div className="absolute left-0 mt-2 w-[320px] max-h-[70vh] overflow-y-auto rounded-xl bg-slate-800 text-white shadow-xl z-50 p-3">
-                {PREFECTURE_GROUPS.map((group) => (
-                  <div key={group.label} className="mb-3 last:mb-0">
-                    <div className="text-xs font-bold bg-slate-700 px-2 py-1 rounded">
-                      {group.label}
-          </div>
-                    <div className="mt-1 grid grid-cols-3 gap-1">
-                      {group.prefectures.map((pref) => (
-                        <button
-                          key={pref}
-                          type="button"
-                          onClick={() => {
-                            onChangeArea(pref);
-                            setIsAreaOpen(false);
-                          }}
-                          className={`text-[11px] px-2 py-1 rounded hover:bg-slate-600 text-left ${
-                            areaFilter === pref ? 'bg-slate-600 font-bold' : ''
-                          }`}
-                        >
-                          {pref}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
 
@@ -213,21 +237,15 @@ const Header: React.FC<{
             <>
             <button
               onClick={onPost}
-                className="hidden md:flex items-center gap-1.5 text-xs sm:text-sm font-bold bg-white text-slate-900 px-3 py-2 rounded-full hover:bg-slate-100 transition-colors"
+                className="hidden md:inline-flex items-center gap-2 text-sm sm:text-base font-bold bg-white text-slate-900 px-5 py-2.5 rounded-full hover:bg-slate-100 transition-colors shadow-sm"
             >
-                <PlusCircle size={16} />
+                <PlusCircle size={18} />
               出品する
-            </button>
-              <button className="hidden sm:inline-flex text-slate-200 hover:text-white relative">
-                <MessageSquare size={20} />
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
-                  2
-                </span>
             </button>
               <button
                 type="button"
                 onClick={onOpenMyPage}
-                className="w-8 h-8 rounded-full bg-slate-800 overflow-hidden border border-slate-600 hover:border-white focus:outline-none focus:ring-2 focus:ring-slate-400"
+                className="hidden lg:block w-10 h-10 rounded-full bg-slate-800 overflow-hidden border border-slate-600 hover:border-white focus:outline-none focus:ring-2 focus:ring-slate-400"
               >
                 <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
               </button>
@@ -284,6 +302,91 @@ const PREFECTURE_GROUPS: { label: string; prefectures: string[] }[] = [
     prefectures: ['福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'],
   },
 ];
+
+const AreaFilter: React.FC<{
+  areaFilter: string;
+  onChangeArea: (value: string) => void;
+}> = ({ areaFilter, onChangeArea }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const selectedAreaLabel = areaFilter || '全国';
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  return (
+    <div ref={containerRef} className="relative flex-none">
+      <button
+        type="button"
+        onClick={() => setIsOpen((v) => !v)}
+        className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50"
+      >
+        <span className="truncate max-w-[100px]">{selectedAreaLabel}</span>
+        <ChevronDown size={14} className="text-slate-400" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 mt-2 w-[400px] max-h-[75vh] overflow-y-auto rounded-xl bg-white text-slate-900 shadow-xl z-50 border border-slate-200 p-4">
+          <div className="mb-3">
+            <button
+              type="button"
+              onClick={() => {
+                onChangeArea('');
+                setIsOpen(false);
+              }}
+              className={`w-full text-sm px-3 py-2 rounded text-left font-bold ${
+                areaFilter === ''
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              全国（すべて）
+            </button>
+          </div>
+          {PREFECTURE_GROUPS.map((group) => (
+            <div key={group.label} className="mb-3 last:mb-0">
+              <div className="text-sm font-bold bg-slate-100 px-2 py-1 rounded">
+                {group.label}
+              </div>
+              <div className="mt-1 grid grid-cols-4 gap-1">
+                {group.prefectures.map((pref) => (
+                  <button
+                    key={pref}
+                    type="button"
+                    onClick={() => {
+                      onChangeArea(pref);
+                      setIsOpen(false);
+                    }}
+                    className={`text-sm px-2 py-1.5 rounded text-left ${
+                      areaFilter === pref
+                        ? 'bg-slate-900 text-white font-bold'
+                        : 'hover:bg-slate-100 text-slate-700'
+                    }`}
+                  >
+                    {pref}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 type PostImage = {
   file: File;
@@ -362,6 +465,7 @@ const MAKER_OPTIONS_BY_CATEGORY: Record<'HEAVY_MACHINERY' | 'ATTACHMENT' | 'DUMP
 
 export default function App() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { me, error: meError } = useMe();
   const isLoggedIn = !!me?.authUserId;
 
@@ -376,6 +480,7 @@ export default function App() {
   const [dealFilter, setDealFilter] = useState<'all' | 'rent' | 'sale'>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | MachineCategory>('all');
   const [areaFilter, setAreaFilter] = useState('');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // 出品フォーム用の状態（フロント側）
   const [postCategory, setPostCategory] = useState<'HEAVY_MACHINERY' | 'DUMP' | 'ATTACHMENT'>(
@@ -401,6 +506,34 @@ export default function App() {
   const [postSubmitting, setPostSubmitting] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
   const [postMessage, setPostMessage] = useState<string | null>(null);
+
+  // 詳細モーダル用の表示テキスト
+  const sizeLabel =
+    selectedMachine?.size && selectedMachine.size.trim() !== '' ? selectedMachine.size : '-';
+  const hoursLabel = selectedMachine
+    ? currentUser.isLoggedIn
+      ? selectedMachine.operatingHours != null
+        ? `${selectedMachine.operatingHours}h`
+        : '未設定'
+      : 'ログイン後'
+    : '';
+  const hasUsageInfo = selectedMachine
+    ? !!(selectedMachine.usageType && selectedMachine.usageType.trim() !== '')
+    : false;
+  const CONDITION_TEXT: { [key: number]: string } = {
+    5: 'とても良い',
+    4: '良い',
+    3: '普通',
+    2: 'やや劣る',
+    1: '悪い',
+  };
+  const conditionLabel = selectedMachine
+    ? currentUser.isLoggedIn
+      ? selectedMachine.condition != null
+        ? CONDITION_TEXT[selectedMachine.condition] ?? '未設定'
+        : '未設定'
+      : 'ログイン後'
+    : '';
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -509,6 +642,23 @@ export default function App() {
     }
     setFavoriteIds((data ?? []).map((row: any) => row.machine_id as string));
   }, [me?.authUserId]);
+
+  // お気に入りなどからの遷移で machineId クエリが付いている場合、該当案件の詳細を開く
+  useEffect(() => {
+    const machineId = searchParams.get('machineId');
+    if (!machineId || dbMachines.length === 0) return;
+
+    const target = dbMachines.find((m) => m.id === machineId);
+    if (target) {
+      setSelectedMachine(target);
+    }
+  }, [searchParams, dbMachines]);
+
+  const handleCloseDetail = () => {
+    setSelectedMachine(null);
+    // クエリパラメータをクリア（常にトップの一覧状態に戻す）
+    router.replace('/', { scroll: false });
+  };
 
   const handleOpenMyPage = () => {
     if (!isLoggedIn) {
@@ -761,6 +911,7 @@ export default function App() {
           sellerId: row.owner_company_id as string,
           rentHistoryCount: 0,
           minRentPeriod,
+          availableFrom: (row.available_from as string | null) ?? null,
         };
       }) ?? [];
 
@@ -820,36 +971,45 @@ export default function App() {
         onChangeSearch={setSearchQuery}
         categoryFilter={categoryFilter}
         onChangeCategory={setCategoryFilter}
-        areaFilter={areaFilter}
-        onChangeArea={setAreaFilter}
       />
 
       <main className="max-w-5xl mx-auto px-4 py-6">
-          {/* Filter Tabs (取引形態） */}
+        {/* Filter Tabs (取引形態） + 絞り込み */}
         <section className="mb-6">
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            {[
-              { id: 'all', label: 'すべて' },
-              { id: 'rent', label: 'レンタル' },
-              { id: 'sale', label: '売買' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setDealFilter(tab.id as any)}
-                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold border transition-all ${
-                  dealFilter === tab.id 
-                    ? 'bg-slate-900 text-white border-slate-900' 
-                    : 'bg-white text-slate-600 border-slate-200'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              {[
+                { id: 'all', label: 'すべて' },
+                { id: 'rent', label: 'レンタル' },
+                { id: 'sale', label: '売買' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setDealFilter(tab.id as any)}
+                  className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold border transition-all ${
+                    dealFilter === tab.id
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-white text-slate-600 border-slate-200'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsFilterOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm"
+            >
+              <SlidersHorizontal size={14} />
+              <span>絞り込み</span>
+            </button>
           </div>
         </section>
 
         {/* List */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-1 md:gap-4">
           {filteredMachines.map(m => (
             <MachineCard 
               key={m.id} 
@@ -860,20 +1020,106 @@ export default function App() {
         </div>
       </main>
 
+      {/* 絞り込みモーダル */}
+      {isFilterOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setIsFilterOpen(false)}
+          />
+          <div className="relative w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
+            <h2 className="text-base font-bold text-slate-900 mb-4">絞り込み</h2>
+
+            {/* 種類選択 */}
+            <div className="mb-5">
+              <p className="text-xs font-bold text-slate-500 mb-2">種類選択</p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { id: 'all', label: 'すべて' },
+                  { id: 'HEAVY_MACHINERY', label: '重機' },
+                  { id: 'DUMP', label: 'ダンプ' },
+                  { id: 'ATTACHMENT', label: 'アタッチメント' },
+                ].map((c) => {
+                  const isActive = categoryFilter === (c.id as 'all' | MachineCategory);
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setCategoryFilter(c.id as 'all' | MachineCategory)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${
+                        isActive
+                          ? 'bg-slate-900 text-white border-slate-900'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      {c.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* エリア選択 */}
+            <div className="mb-6">
+              <p className="text-xs font-bold text-slate-500 mb-2">エリア選択</p>
+              <select
+                className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-sm text-slate-900"
+                value={areaFilter}
+                onChange={(e) => setAreaFilter(e.target.value)}
+              >
+                <option value="">全国（すべて）</option>
+                {PREFECTURE_GROUPS.map((group) => (
+                  <optgroup key={group.label} label={group.label}>
+                    {group.prefectures.map((pref) => (
+                      <option key={pref} value={pref}>
+                        {pref}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                onClick={() => {
+                  setCategoryFilter('all');
+                  setAreaFilter('');
+                }}
+              >
+                条件をクリア
+              </button>
+              <button
+                type="button"
+                className="flex-1 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800"
+                onClick={() => setIsFilterOpen(false)}
+              >
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Detail Modal / Slide-over */}
       {selectedMachine && (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedMachine(null)} />
-          <div className="relative bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl shadow-2xl animate-in slide-in-from-bottom duration-300">
-            <button 
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={handleCloseDetail}
+          />
+          <div className="relative bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl sm:rounded-2xl shadow-2xl animate-in slide-in-from-bottom duration-300 -translate-y-4 sm:translate-y-0">
+            <button
               className="absolute top-4 right-4 p-2 bg-white/80 rounded-full hover:bg-white z-10 border border-slate-200"
-              onClick={() => setSelectedMachine(null)}
+              onClick={handleCloseDetail}
             >
               <X size={20} />
             </button>
 
             {/* Images */}
-            <div className="h-64 sm:h-80 bg-slate-200 overflow-hidden relative">
+            <div className="h-80 sm:h-80 bg-slate-200 overflow-hidden relative">
               <img src={selectedMachine.images[0]} className="w-full h-full object-cover" />
               <div className="absolute bottom-4 left-4 flex gap-1.5">
                 {selectedMachine.dealTypes.map(t => <Badge key={t} type={t} />)}
@@ -881,107 +1127,117 @@ export default function App() {
             </div>
 
             <div className="p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div>
-                  <h2 className="text-2xl font-black text-slate-900 mb-1">{selectedMachine.name}</h2>
-                  <div className="flex items-center gap-2 text-slate-500 text-sm">
-                    <span className="font-bold">{selectedMachine.manufacturer}</span>
-                    <span>•</span>
-                    <span>{selectedMachine.model}</span>
-                    <span>•</span>
-                    <span className="flex items-center">
-                      <MapPin size={14} className="mr-0.5" />
-                      {selectedMachine.location}
-                    </span>
-                  </div>
+              {/* タイトル / メーカー・都道府県 / サイズ・稼働時間・状態 */}
+              <div className="mb-6">
+                <h2 className="text-2xl font-black text-slate-900 mb-2">
+                  {selectedMachine.name}
+                </h2>
+                <div className="flex flex-wrap items-center gap-x-2 text-slate-600 text-base">
+                  <span className="font-bold">
+                    {selectedMachine.manufacturer || 'メーカー未設定'}
+                  </span>
+                  <span className="text-slate-300">|</span>
+                  <span className="inline-flex items-center">
+                    <MapPin size={14} className="mr-0.5" />
+                    {selectedMachine.location || '所在地未設定'}
+                  </span>
                 </div>
-                
-                <div className="flex flex-col gap-2">
-                  {!currentUser.isLoggedIn ? (
-                    <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex items-center justify-center gap-3">
-                      <Lock size={18} className="text-slate-400" />
-                      <div>
-                        <p className="text-xs font-bold text-slate-700">価格情報はログイン後に表示されます</p>
-                        <button onClick={handleLogin} className="text-blue-600 text-[10px] font-bold underline">今すぐログイン</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="bg-slate-900 text-white p-4 rounded-xl">
-                      <div className="flex justify-between items-baseline mb-1">
-                        <span className="text-[10px] text-slate-400">
-                          レンタル目安 (
-                          {selectedMachine.rentalUnit === 'MONTH' ? '月額' : '日額'})
-                        </span>
-                        <span className="text-xl font-black">¥{selectedMachine.priceRental?.toLocaleString()}<span className="text-xs font-normal">〜</span></span>
-                      </div>
-                      <div className="flex justify-between items-baseline border-t border-white/10 pt-1 mt-1">
-                        <span className="text-[10px] text-slate-400">売買参考価格</span>
-                        <span className="text-lg font-bold">¥{selectedMachine.priceSale?.toLocaleString()}<span className="text-xs font-normal">〜</span></span>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <p className="mt-2 text-base text-slate-700">
+                  サイズ <span className="font-bold">{sizeLabel}</span>
+                  <span className="mx-2 text-slate-300">|</span>
+                  稼働時間 <span className="font-bold">{hoursLabel}</span>
+                  <span className="mx-2 text-slate-300">|</span>
+                  状態 <span className="font-bold">{conditionLabel}</span>
+                </p>
               </div>
 
-              {/* Spec Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
-                {[
-                  { label: 'サイズ', value: selectedMachine.size || '-' },
-                  {
-                    label: '稼働時間',
-                    value: currentUser.isLoggedIn
-                      ? selectedMachine.operatingHours
-                        ? `${selectedMachine.operatingHours}h`
-                        : '未設定'
-                      : 'ログイン後',
-                  },
-                  {
-                    label: '状態',
-                    value: currentUser.isLoggedIn
-                      ? selectedMachine.condition
-                        ? `${selectedMachine.condition}/5`
-                        : '未設定'
-                      : 'ログイン後',
-                  },
-                ].map((item, i) => (
-                  <div key={i} className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                    <p className="text-[10px] text-slate-400 font-bold mb-1 uppercase tracking-wider">
-                      {item.label}
-                    </p>
-                    <p className="text-sm font-bold text-slate-800">{item.value}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Logic: Login required details */}
+              {/* ログイン後のみ詳細と金額を表示 */}
               {currentUser.isLoggedIn ? (
                 <div className="space-y-6">
-                  <section>
-                    <h3 className="font-bold flex items-center gap-2 mb-3 text-slate-800">
-                      <History size={18} />
-                      使用履歴・コンディション
-                    </h3>
-                    <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
-                      <div>
-                        <p className="text-xs text-slate-400 mb-1">主な使用用途</p>
-                        <p className="text-sm">{selectedMachine.usageType}</p>
+                  {/* 使用用途・現場情報（入力があるときだけ表示） */}
+                  {hasUsageInfo && (
+                    <section>
+                      <h3 className="font-bold flex items-center gap-2 mb-3 text-slate-800">
+                        <History size={18} />
+                        使用用途・現場情報
+                      </h3>
+                      <div className="bg-white border border-slate-200 rounded-xl p-4">
+                        <p className="text-sm text-slate-700 whitespace-pre-line">
+                          {selectedMachine.usageType}
+                        </p>
                       </div>
-                      <div>
-                        <p className="text-xs text-slate-400 mb-1">現場規模</p>
-                        <p className="text-sm">{selectedMachine.siteScale}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-400 mb-1">修理・故障履歴</p>
-                        <p className="text-sm">{selectedMachine.history}</p>
-                      </div>
-                    </div>
-                  </section>
+                    </section>
+                  )}
 
+                  {/* 条件（最低レンタル期間 / 利用可能開始日） */}
+                  {(selectedMachine.minRentPeriod || selectedMachine.availableFrom) && (
+                    <section>
+                      <h3 className="font-bold mb-3 text-slate-800">条件</h3>
+                      <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-wrap gap-6 text-sm text-slate-700">
+                        {selectedMachine.minRentPeriod && (
+                          <div>
+                            <p className="text-xs text-slate-400 mb-0.5">
+                              最低レンタル期間
+                            </p>
+                            <p className="font-bold">{selectedMachine.minRentPeriod}</p>
+                          </div>
+                        )}
+                        {selectedMachine.availableFrom && (
+                          <div>
+                            <p className="text-xs text-slate-400 mb-0.5">
+                              利用可能開始日
+                            </p>
+                            <p className="font-bold">
+                              {selectedMachine.availableFrom}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* 金額（レンタル目安 / 売買参考価格） */}
+                  {(selectedMachine.priceRental != null ||
+                    selectedMachine.priceSale != null) && (
+                    <section>
+                      <div className="bg-slate-900 text-white p-4 rounded-xl">
+                        {selectedMachine.priceRental != null && (
+                          <div className="flex justify-between items-baseline mb-1.5">
+                            <span className="text-sm font-semibold text-slate-200 whitespace-nowrap">
+                              レンタル目安
+                              {selectedMachine.rentalUnit === 'MONTH'
+                                ? '（月額）'
+                                : selectedMachine.rentalUnit === 'DAY'
+                                ? '（日額）'
+                                : ''}
+                            </span>
+                            <span className="text-2xl font-black whitespace-nowrap">
+                              ¥{selectedMachine.priceRental.toLocaleString()}
+                              <span className="text-xs font-normal">〜</span>
+                            </span>
+                          </div>
+                        )}
+                        {selectedMachine.priceSale != null && (
+                          <div className="flex justify-between items-baseline border-t border-white/10 pt-1.5 mt-1.5">
+                            <span className="text-sm font-semibold text-slate-200">
+                              売買参考価格
+                            </span>
+                            <span className="text-2xl font-black">
+                              ¥{selectedMachine.priceSale.toLocaleString()}
+                              <span className="text-xs font-normal">〜</span>
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                  )}
                 </div>
               ) : (
                 <div className="bg-blue-50 border border-blue-100 p-6 rounded-2xl text-center">
-                  <h4 className="font-bold text-blue-900 mb-4">詳細情報を見るにはログインが必要です</h4>
-                  <button 
+                  <h4 className="font-bold text-blue-900 mb-4">
+                    詳細情報を見るにはログインが必要です
+                  </h4>
+                  <button
                     onClick={handleLogin}
                     className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
                   >
@@ -1023,8 +1279,17 @@ export default function App() {
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsPosting(false)} />
           <div className="relative bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
-            <h2 className="text-xl font-bold mb-4">重機・ダンプを出品する</h2>
-            <form className="space-y-4" onSubmit={handleSubmitPost}>
+            <h2 className="text-xl font-bold mb-1">重機・ダンプを出品する</h2>
+            <p className="text-xs text-slate-500 mb-4">
+              最低限の項目だけでかんたんに出品できます。<span className="font-bold">＊</span>が付いた項目は必須です。
+            </p>
+            <form className="space-y-5" onSubmit={handleSubmitPost}>
+              {/* セクション: 基本情報 */}
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <span className="font-bold text-slate-600">基本情報</span>
+                <span>出品カードに表示されるベースの情報です。</span>
+              </div>
+
               {/* タイトル（必須） */}
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-1">
@@ -1041,7 +1306,7 @@ export default function App() {
               </div>
 
               {/* 写真（必須・最大5枚） */}
-                <div>
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
                 <label className="block text-xs font-bold text-slate-500 mb-1">
                   写真（最大5枚・スマホ/PCからアップロード）
                   <span className="ml-1 text-red-500 align-middle">*</span>
@@ -1309,7 +1574,15 @@ export default function App() {
                 </div>
 
               {/* 区切り線（取引形態の直前） */}
-              <div className="mt-6 mb-4 h-px bg-slate-200" />
+              <div className="mt-6 mb-3 h-px bg-slate-200" />
+
+              {/* 取引条件セクション見出し */}
+              <div className="mb-2">
+                <p className="text-xs font-bold text-slate-600">取引条件</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  レンタル・売買のどちらを受け付けるかと、おおよその金額感を入力してください。
+                </p>
+              </div>
 
               {/* 取引形態 */}
               <div>
@@ -1341,7 +1614,7 @@ export default function App() {
 
               {/* レンタル条件 */}
               {postDealRental && (
-                <div className="space-y-3">
+                <div className="mt-2 space-y-3 rounded-2xl bg-slate-50 border border-slate-200 p-4">
                   {/* レンタル金額（メイン） */}
                   <div className="flex items-center gap-3">
                     <label className="flex items-center gap-1 text-xs font-bold text-slate-500 whitespace-nowrap">
@@ -1419,7 +1692,7 @@ export default function App() {
 
               {/* 売買条件 */}
               {postDealSale && (
-                <div className="flex items-center gap-3">
+                <div className="mt-2 flex items-center gap-3 rounded-2xl bg-slate-50 border border-slate-200 p-4">
                   <label className="flex items-center gap-1 text-xs font-bold text-slate-500 whitespace-nowrap">
                     <span>売買参考価格（税込）</span>
                     <span className="text-red-500 align-middle">*</span>
@@ -1471,28 +1744,32 @@ export default function App() {
         </div>
       )}
 
-      {/* Mobile Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 h-20 px-6 flex items-center justify-between z-40 lg:hidden">
-        <button className="flex flex-col items-center gap-1 text-slate-900">
-          <Search size={24} />
-          <span className="text-[10px] font-bold">探す</span>
-        </button>
-        <button 
-          onClick={handleOpenPost}
-          className="flex flex-col items-center gap-1 -translate-y-4"
+      {/* Mobile Navigation (Instagram-like: ホーム / 出品 / マイページ) */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 h-16 px-4 flex items-center justify-between z-40 lg:hidden">
+        <button
+          type="button"
+          onClick={() => router.push('/')}
+          className="flex-1 flex flex-col items-center gap-1 text-slate-900"
         >
-          <div className="bg-slate-900 text-white p-4 rounded-full shadow-lg shadow-slate-300">
-            <PlusCircle size={28} />
-          </div>
-          <span className="text-[10px] font-bold text-slate-900 mt-1">出品</span>
+          <Home size={22} />
+          <span className="text-[10px] font-bold">ホーム</span>
         </button>
         <button
+          type="button"
+          onClick={handleOpenPost}
+          className="flex-1 flex flex-col items-center gap-1 text-slate-900"
+        >
+          <PlusCircle size={24} />
+          <span className="text-[10px] font-bold">出品</span>
+        </button>
+        <button
+          type="button"
           onClick={handleOpenMyPage}
-          className={`flex flex-col items-center gap-1 ${
+          className={`flex-1 flex flex-col items-center gap-1 ${
             isLoggedIn ? 'text-slate-900' : 'text-slate-400'
           }`}
         >
-          <UserIcon size={24} />
+          <UserIcon size={22} />
           <span className="text-[10px] font-bold">マイページ</span>
         </button>
       </nav>

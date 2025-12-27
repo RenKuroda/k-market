@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import React, { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Heart, History, LogOut, Truck } from 'lucide-react';
 import { useMe } from '../../lib/useMe';
 import { MOCK_USER } from '../../constants';
@@ -11,6 +11,7 @@ import { supabase } from '../../lib/supabaseClient';
 
 export default function MePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isLoading, me, error: meError, signOut, refresh } = useMe();
   const isLoggedIn = !!me?.authUserId;
 
@@ -50,6 +51,8 @@ export default function MePage() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  const isDisplayNameOnboarding = searchParams.get('onboarding') === 'displayName';
 
   useEffect(() => {
     if (!isLoading && !isLoggedIn) {
@@ -168,6 +171,11 @@ export default function MePage() {
       }
 
       await refresh();
+      // 新規登録直後の「表示名設定」フローの場合は、保存後にトップへ遷移
+      if (isDisplayNameOnboarding) {
+        router.push('/');
+        return;
+      }
       setSaveMessage('プロフィールを保存しました。');
     } catch (err: any) {
       const msg: string | undefined = err?.message ?? err?.error_description;
@@ -296,6 +304,10 @@ export default function MePage() {
     router.push('/');
   };
 
+  const handleClickFavorite = (machineId: string) => {
+    router.push(`/?machineId=${machineId}`);
+  };
+
   const handleBackHome = () => {
     router.push('/');
   };
@@ -316,51 +328,30 @@ export default function MePage() {
           <div className="bg-slate-900 text-white p-1.5 rounded-lg font-black tracking-tighter">K-M</div>
           <span className="text-lg font-bold tracking-tight hidden sm:block">K-Market</span>
         </button>
-        {isLoggedIn && (
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                LOGGED IN AS
-              </p>
-              <p className="text-xs font-bold text-slate-900">
-                {me?.profile?.name ?? me?.email ?? '未設定'}
-              </p>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden">
-              {avatarUrl && (
-                <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-              )}
-            </div>
-          </div>
-        )}
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-        <div className="mb-1">
+        <div className="mb-2">
           <button
             type="button"
             onClick={handleBackHome}
-            className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-slate-900"
+            className="inline-flex items-center gap-1.5 text-sm font-bold text-slate-600 hover:text-slate-900"
           >
-            <ArrowLeft size={14} />
+            <ArrowLeft size={16} />
             <span>トップに戻る</span>
           </button>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Account</p>
             <h1 className="text-2xl font-bold">マイページ</h1>
-            <p className="mt-1 text-sm text-slate-500">
-              アカウント情報やプロフィール、出品情報を管理します。
-            </p>
           </div>
         </div>
 
         {/* プロフィール設定 */}
         <section>
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-            <p className="text-xs font-bold text-slate-500 mb-4">プロフィール設定</p>
+            <p className="text-sm font-bold text-slate-600 mb-4">プロフィール設定</p>
             <div className="flex flex-col md:flex-row gap-6">
               <div className="flex flex-col items-center md:items-start gap-3">
                 <div className="w-20 h-20 rounded-full bg-slate-200 overflow-hidden">
@@ -371,7 +362,7 @@ export default function MePage() {
                 <button
                   type="button"
                   onClick={handleAvatarButtonClick}
-                  className="px-3 py-1.5 rounded-full border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                  className="px-3 py-2 rounded-full border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                   disabled={avatarUploading}
                 >
                   {avatarUploading ? 'アップロード中…' : '画像を変更'}
@@ -379,13 +370,13 @@ export default function MePage() {
                 <button
                   type="button"
                   onClick={handleAvatarDelete}
-                  className="text-[11px] text-slate-400 hover:text-red-600 disabled:opacity-60"
+                  className="text-xs text-slate-400 hover:text-red-600 disabled:opacity-60"
                   disabled={avatarUploading}
                 >
                   画像を削除
                 </button>
                 {avatarError && (
-                  <p className="text-[11px] text-red-600 max-w-xs text-center md:text-left">
+                  <p className="text-xs text-red-600 max-w-xs text-center md:text-left">
                     {avatarError}
                   </p>
                 )}
@@ -398,35 +389,35 @@ export default function MePage() {
                 />
               </div>
 
-              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 text-base">
                 <div>
-                  <p className="text-[10px] text-slate-400 font-bold mb-1">会社名</p>
+                  <p className="text-xs text-slate-500 font-bold mb-1">会社名</p>
                   <p className="font-bold text-slate-900">{me?.company?.name ?? '未設定'}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-slate-400 font-bold mb-1">USER（修正可能）</p>
+                  <p className="text-xs text-slate-500 font-bold mb-1">USER</p>
                   <input
                     type="text"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-slate-300"
                     value={userName}
                     onChange={(e) => setUserName(e.target.value)}
                   />
-                  <p className="mt-1 text-[11px] text-slate-500">※閲覧者には表示されません。</p>
+                  <p className="mt-1 text-xs text-slate-500">※閲覧者には表示されません。</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-slate-400 font-bold mb-1">アドレス（修正可能）</p>
+                  <p className="text-xs text-slate-500 font-bold mb-1">アドレス</p>
                   <input
                     type="email"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-slate-300"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
                 <div>
-                  <p className="text-[10px] text-slate-400 font-bold mb-1">表示名（修正可能）</p>
+                  <p className="text-xs text-slate-500 font-bold mb-1">表示名</p>
                   <input
                     type="text"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-slate-300"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                   />
@@ -435,12 +426,12 @@ export default function MePage() {
             </div>
 
             {saveError && (
-              <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-[11px] text-red-700">
+              <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-700">
                 {saveError}
               </div>
             )}
             {saveMessage && (
-              <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-700">
+              <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
                 {saveMessage}
               </div>
             )}
@@ -450,16 +441,16 @@ export default function MePage() {
                 type="button"
                 onClick={handleSaveProfile}
                 disabled={savingProfile}
-                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60"
               >
                 {savingProfile ? '保存中…' : '保存する'}
               </button>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-100"
+                className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-5 py-2.5 text-sm font-bold text-red-600 hover:bg-red-100"
               >
-                <LogOut size={14} />
+                <LogOut size={16} />
                 <span>ログアウト</span>
               </button>
             </div>
@@ -474,15 +465,12 @@ export default function MePage() {
                 <Truck size={18} />
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-500">出品している重機</p>
-                <p className="text-sm text-slate-600">
-                  自社が出品している重機・ダンプ・アタッチメントを一覧・編集できます。
-                </p>
+                <p className="text-lg font-bold text-slate-800">出品している重機</p>
               </div>
             </div>
             <Link
               href="/supplier"
-              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800"
+              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-6 py-3 text-base font-bold text-white hover:bg-slate-800"
             >
               出品管理画面を開く
             </Link>
@@ -493,36 +481,51 @@ export default function MePage() {
         <section>
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-3">
-              <Heart size={16} className="text-slate-500" />
-              <p className="text-xs font-bold text-slate-700">いいね！一覧</p>
+              <Heart size={18} className="text-slate-500" />
+              <p className="text-base font-bold text-slate-800">いいね！一覧</p>
             </div>
             {favError && (
-              <p className="text-xs text-red-700 mb-2">
+              <p className="text-sm text-red-700 mb-2">
                 いいね！一覧の取得でエラーが発生しました: {favError}
               </p>
             )}
             {favorites.length === 0 ? (
-              <p className="text-sm text-slate-500">まだ「いいね！」した出品がありません。</p>
+              <p className="text-base text-slate-500">まだ「いいね！」した出品がありません。</p>
             ) : (
-              <ul className="space-y-2 text-sm">
+              <ul className="space-y-3 text-base">
                 {favorites.map((fav) => {
                   const m = fav.machine;
                   if (!m) return null;
                   const location = m.location_prefecture || '';
                   const size = m.machine_class || '-';
-                  const year = m.year_of_manufacture
-                    ? `${m.year_of_manufacture}年`
-                    : '未設定';
                   const hours = m.operating_hours ? `${m.operating_hours}h` : '未設定';
                   const condition =
-                    m.condition != null ? `${m.condition}/5` : '未設定';
+                    m.condition != null
+                      ? m.condition >= 5
+                        ? 'とても良い'
+                        : m.condition === 4
+                        ? '良い'
+                        : m.condition === 3
+                        ? '普通'
+                        : m.condition === 2
+                        ? 'やや悪い'
+                        : '悪い'
+                      : '未設定';
+
+                  const rentalPriceLabel =
+                    m.rental_price_daily != null
+                      ? `¥${m.rental_price_daily.toLocaleString()}/日`
+                      : null;
+                  const salePriceLabel =
+                    m.sale_price != null ? `¥${m.sale_price.toLocaleString()}` : null;
 
                   const thumbnail = m.main_image_url || DEFAULT_THUMBNAIL;
 
                   return (
                     <li
                       key={`${fav.machine_id}-${fav.created_at}`}
-                      className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
+                      className="flex items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 cursor-pointer hover:bg-slate-100 transition-colors"
+                      onClick={() => handleClickFavorite(m.id)}
                     >
                       <div className="flex items-center gap-3">
                         <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg bg-slate-200 overflow-hidden flex-shrink-0">
@@ -533,21 +536,23 @@ export default function MePage() {
                           />
                         </div>
                         <div className="flex flex-col">
-                          <span className="font-bold text-slate-900">{m.title}</span>
-                          <span className="text-[11px] text-slate-500">
+                          <span className="font-bold text-slate-900 text-base">{m.title}</span>
+                          <span className="text-sm text-slate-500">
                             {location || '所在地未設定'}
                           </span>
-                          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-slate-600">
+                          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
                             <span>サイズ: {size}</span>
-                            <span>年式: {year}</span>
                             <span>稼働時間: {hours}</span>
                             <span>状態: {condition}</span>
                           </div>
+                          {(rentalPriceLabel || salePriceLabel) && (
+                            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-900 font-semibold">
+                              {rentalPriceLabel && <span>レンタル目安: {rentalPriceLabel}</span>}
+                              {salePriceLabel && <span>売買参考価格: {salePriceLabel}</span>}
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <span className="ml-2 text-[11px] text-slate-400 flex-shrink-0">
-                        {new Date(fav.created_at).toLocaleDateString('ja-JP')}
-                      </span>
                     </li>
                   );
                 })}
@@ -567,13 +572,13 @@ export default function MePage() {
               </div>
               <h1 className="text-xl font-bold tracking-tight">K-Market</h1>
             </div>
-            <p className="text-sm text-slate-500 max-w-sm">
+            <p className="text-base text-slate-500 max-w-sm">
               解体業界における「借りる・買う」の流動性を高め、資産の有効活用と現場の生産性向上を支援するプラットフォームです。
             </p>
           </div>
           <div>
-            <h4 className="font-bold text-slate-800 mb-4 text-sm">カテゴリー</h4>
-            <ul className="text-sm text-slate-500 space-y-2">
+            <h4 className="font-bold text-slate-800 mb-4 text-base">カテゴリー</h4>
+            <ul className="text-base text-slate-500 space-y-2">
               <li>重機</li>
               <li>ダンプカー</li>
               <li>アタッチメント</li>
@@ -581,8 +586,8 @@ export default function MePage() {
             </ul>
           </div>
           <div>
-            <h4 className="font-bold text-slate-800 mb-4 text-sm">サポート</h4>
-            <ul className="text-sm text-slate-500 space-y-2">
+            <h4 className="font-bold text-slate-800 mb-4 text-base">サポート</h4>
+            <ul className="text-base text-slate-500 space-y-2">
               <li>利用規約</li>
               <li>プライバシーポリシー</li>
               <li>お問い合わせ</li>

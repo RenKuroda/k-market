@@ -74,7 +74,8 @@ export default function AuthPage() {
 
       setMessage('登録が完了しました（会社・プロフィール作成済み）。');
       await refresh();
-      router.push('/');
+      // 新規登録完了後は、まず表示名を設定するためにマイページへ遷移
+      router.push('/me?onboarding=displayName');
     } catch (err: any) {
       setFormError(err?.message ?? 'エラーが発生しました');
     } finally {
@@ -95,56 +96,7 @@ export default function AuthPage() {
       </header>
 
       <main className="max-w-xl mx-auto px-4 py-8">
-        <h2 className="text-2xl font-black mb-2">ログイン / 新規登録</h2>
-        <p className="text-sm text-slate-600 mb-6">
-          Phase0：Email/Password でログインし、ログイン中なら userId / role / company.name を表示します。
-        </p>
-
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 mb-6">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-slate-800">ログイン状態</h3>
-            {isLoggedIn ? (
-              <button
-                onClick={() => void signOut()}
-                className="text-xs font-bold px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50"
-              >
-                ログアウト
-              </button>
-            ) : null}
-          </div>
-
-          {isLoading ? (
-            <p className="text-sm text-slate-500 mt-3">読み込み中...</p>
-          ) : isLoggedIn ? (
-            <div className="mt-3 grid grid-cols-1 gap-2 text-sm">
-              <div className="flex justify-between gap-3">
-                <span className="text-slate-500 font-bold">ユーザーID</span>
-                <span className="font-mono text-xs break-all text-right">{me?.authUserId}</span>
-              </div>
-              <div className="flex justify-between gap-3">
-                <span className="text-slate-500 font-bold">role</span>
-                <span className="font-bold">{roleLabel}</span>
-              </div>
-              <div className="flex justify-between gap-3">
-                <span className="text-slate-500 font-bold">company</span>
-                <span className="font-bold">{companyLabel}</span>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-slate-500 mt-3">未ログインです。</p>
-          )}
-
-          {(meError || formError) && (
-            <div className="mt-3 bg-red-50 border border-red-100 text-red-700 rounded-xl p-3 text-sm">
-              {formError ?? meError}
-            </div>
-          )}
-          {message && (
-            <div className="mt-3 bg-blue-50 border border-blue-100 text-blue-800 rounded-xl p-3 text-sm">
-              {message}
-            </div>
-          )}
-        </div>
+        <h2 className="text-2xl font-black mb-6">ログイン / 新規登録</h2>
 
         {!isLoggedIn && (
           <div className="bg-white border border-slate-200 rounded-2xl p-6">
@@ -269,6 +221,17 @@ export default function AuthPage() {
               >
                 {mode === 'login' ? 'ログインする' : '新規登録する'}
               </button>
+
+              {(meError || formError) && (
+                <div className="bg-red-50 border border-red-100 text-red-700 rounded-xl p-3 text-sm">
+                  {formError ?? meError}
+                </div>
+              )}
+              {message && (
+                <div className="bg-blue-50 border border-blue-100 text-blue-800 rounded-xl p-3 text-sm">
+                  {message}
+                </div>
+              )}
             </form>
           </div>
         )}
