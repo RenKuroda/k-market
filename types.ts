@@ -14,6 +14,7 @@ export interface Machine {
   thumbnail: string;
   images: string[];
   dealTypes: DealType[];
+  rentalUnit?: 'DAY' | 'MONTH'; // レンタル金額の単位（MVPは日額/月額）
   
   // Private fields (Login required)
   priceRental?: number; // Daily
