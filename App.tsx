@@ -501,6 +501,16 @@ export default function App() {
           minRentPeriod = `${row.rental_min_period}${unitLabel}`;
         }
 
+        const rawCondition = row.condition as number | null;
+        const condition: 1 | 2 | 3 | 4 | 5 =
+          rawCondition === 1 ||
+          rawCondition === 2 ||
+          rawCondition === 3 ||
+          rawCondition === 4 ||
+          rawCondition === 5
+            ? rawCondition
+            : 3;
+
         return {
           id: row.id,
           category: (row.category as Machine['category']) ?? 'HEAVY_MACHINERY',
@@ -521,7 +531,7 @@ export default function App() {
           usageType: row.usage_type ?? undefined,
           siteScale: row.site_scale ?? undefined,
           history: row.history ?? undefined,
-          condition: (row.condition as number | null) ?? 3,
+          condition,
           sellerId: row.owner_company_id as string,
           rentHistoryCount: 0,
           minRentPeriod,
