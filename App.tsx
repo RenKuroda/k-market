@@ -160,10 +160,10 @@ const Header: React.FC<{
                       isActive ? 'bg-white' : 'bg-transparent'
                     }`}
                   />
-                </button>
+            </button>
               );
             })}
-          </div>
+            </div>
 
           {/* エリア */}
           <div className="relative hidden sm:block flex-none">
@@ -182,7 +182,7 @@ const Header: React.FC<{
                   <div key={group.label} className="mb-3 last:mb-0">
                     <div className="text-xs font-bold bg-slate-700 px-2 py-1 rounded">
                       {group.label}
-                    </div>
+          </div>
                     <div className="mt-1 grid grid-cols-3 gap-1">
                       {group.prefectures.map((pref) => (
                         <button
@@ -1041,7 +1041,7 @@ export default function App() {
               </div>
 
               {/* 写真（必須・最大5枚） */}
-              <div>
+                <div>
                 <label className="block text-xs font-bold text-slate-500 mb-1">
                   写真（最大5枚・スマホ/PCからアップロード）
                   <span className="ml-1 text-red-500 align-middle">*</span>
@@ -1074,7 +1074,7 @@ export default function App() {
                         >
                           ×
                         </button>
-                      </div>
+                </div>
                     ))}
                     {postImages.length < 5 && (
                       <button
@@ -1086,7 +1086,7 @@ export default function App() {
                         追加
                       </button>
                     )}
-                  </div>
+                </div>
                 )}
                 <input
                   ref={fileInputRef}
@@ -1296,7 +1296,7 @@ export default function App() {
                 </div>
 
               {/* 使用用途・現場情報 */}
-                <div>
+              <div>
                 <label className="block text-xs font-bold text-slate-500 mb-1">
                   使用用途・現場情報（任意）
                 </label>
@@ -1326,7 +1326,7 @@ export default function App() {
                       onChange={(e) => setPostDealRental(e.target.checked)}
                     />
                     レンタル
-                  </label>
+                    </label>
                   <label className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 cursor-pointer text-sm">
                     <input
                       type="checkbox"
@@ -1451,13 +1451,13 @@ export default function App() {
               )}
 
               <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
+              <button 
+                type="button"
                   className="flex-1 border border-slate-200 rounded-xl py-3 text-sm font-bold text-slate-600 hover:bg-slate-50"
-                  onClick={() => setIsPosting(false)}
-                >
+                onClick={() => setIsPosting(false)}
+              >
                   キャンセル
-                </button>
+              </button>
                 <button
                   type="submit"
                   disabled={postSubmitting}
