@@ -10,6 +10,14 @@ import { User } from '../../types';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function MePage() {
+  return (
+    <React.Suspense fallback={null}>
+      <MePageContent />
+    </React.Suspense>
+  );
+}
+
+function MePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isLoading, me, error: meError, signOut, refresh } = useMe();
