@@ -15,7 +15,7 @@ export default function MePage() {
   const isLoggedIn = !!me?.authUserId;
 
   const currentUser: User = { ...MOCK_USER, isLoggedIn };
-  const fallbackAvatar = 'https://api.dicebear.com/7.x/big-smile/svg?seed=k-market-user';
+  const fallbackAvatar = MOCK_USER.avatar;
   const DEFAULT_THUMBNAIL =
     'https://images.pexels.com/photos/6003651/pexels-photo-6003651.jpeg?auto=compress&cs=tinysrgb&w=400';
 
@@ -43,7 +43,7 @@ export default function MePage() {
   const [displayName, setDisplayName] = useState('');
   const [favorites, setFavorites] = useState<FavoriteRow[]>([]);
   const [favError, setFavError] = useState<string | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string>(fallbackAvatar);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -58,10 +58,11 @@ export default function MePage() {
   }, [isLoading, isLoggedIn, router]);
 
   useEffect(() => {
+    if (isLoading) return;
     const fromMe = (me?.avatarUrl as string | null | undefined) ?? null;
     const fromMock = currentUser.avatar ?? null;
-    setAvatarUrl(fromMe || fromMock || fallbackAvatar);
-  }, [me?.avatarUrl, currentUser.avatar]);
+    setAvatarUrl(fromMe || fromMock || fallbackAvatar || null);
+  }, [isLoading, me?.avatarUrl, currentUser.avatar]);
 
   useEffect(() => {
     const loadFavorites = async () => {
@@ -216,7 +217,7 @@ export default function MePage() {
         throw updateError;
       }
 
-      setAvatarUrl((currentUser.avatar as string | undefined) ?? fallbackAvatar);
+      setAvatarUrl((currentUser.avatar as string | undefined) ?? fallbackAvatar ?? null);
     } catch (err: any) {
       const msg: string | undefined = err?.message ?? err?.error_description;
       setAvatarError(msg ?? '画像の削除に失敗しました。');
@@ -326,7 +327,9 @@ export default function MePage() {
               </p>
             </div>
             <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden">
-              <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+              {avatarUrl && (
+                <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+              )}
             </div>
           </div>
         )}
@@ -361,7 +364,9 @@ export default function MePage() {
             <div className="flex flex-col md:flex-row gap-6">
               <div className="flex flex-col items-center md:items-start gap-3">
                 <div className="w-20 h-20 rounded-full bg-slate-200 overflow-hidden">
-                  <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                  {avatarUrl && (
+                    <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                  )}
                 </div>
                 <button
                   type="button"
@@ -484,19 +489,6 @@ export default function MePage() {
           </div>
         </section>
 
-        {/* 閲覧履歴（MVPではプレースホルダ） */}
-        <section>
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-3">
-              <History size={16} className="text-slate-500" />
-              <p className="text-xs font-bold text-slate-700">閲覧履歴</p>
-            </div>
-            <p className="text-sm text-slate-500">
-              直近で閲覧した重機・ダンプをここに表示する予定です。（MVPでは未実装）
-            </p>
-          </div>
-        </section>
-
         {/* いいね！一覧 */}
         <section>
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
@@ -516,9 +508,7 @@ export default function MePage() {
                 {favorites.map((fav) => {
                   const m = fav.machine;
                   if (!m) return null;
-                  const location = [m.location_prefecture, m.location_city]
-                    .filter(Boolean)
-                    .join(' ');
+                  const location = m.location_prefecture || '';
                   const size = m.machine_class || '-';
                   const year = m.year_of_manufacture
                     ? `${m.year_of_manufacture}年`
@@ -565,54 +555,42 @@ export default function MePage() {
             )}
           </div>
         </section>
-
-        {/* ログイン情報（ページ最下部） */}
-        {isLoading ? (
-          <section className="mb-16">
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-              <p className="text-xs font-bold text-slate-500 mb-2">ログイン情報</p>
-              <p className="text-sm text-slate-500">読み込み中です...</p>
-            </div>
-          </section>
-        ) : (
-          <section className="mb-16">
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-              <p className="text-xs font-bold text-slate-500 mb-4">ログイン情報</p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-[10px] text-slate-400 font-bold mb-1 uppercase tracking-wider">
-                    USER ID
-                  </p>
-                  <p className="text-xs font-mono text-slate-800 break-all">{me?.authUserId}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-slate-400 font-bold mb-1 uppercase tracking-wider">
-                    ROLE
-                  </p>
-                  <p className="text-sm font-bold text-slate-900">
-                    {me?.profile?.role ?? '未設定'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-slate-400 font-bold mb-1 uppercase tracking-wider">
-                    COMPANY
-                  </p>
-                  <p className="text-sm font-bold text-slate-900">
-                    {me?.company?.name ?? '未設定'}
-                  </p>
-                </div>
-              </div>
-
-              {!!meError && (
-                <div className="mt-4 bg-red-50 border border-red-200 text-red-800 text-sm rounded-xl p-3">
-                  {meError}
-                </div>
-              )}
-            </div>
-          </section>
-        )}
       </main>
+
+      {/* Footer (Desktop) */}
+      <footer className="hidden lg:block bg-white border-t border-slate-200 py-12 mt-12">
+        <div className="max-w-5xl mx-auto px-4 grid grid-cols-4 gap-8">
+          <div className="col-span-2">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="bg-slate-900 text-white p-1.5 rounded-lg font-black tracking-tighter">
+                K-M
+              </div>
+              <h1 className="text-xl font-bold tracking-tight">K-Market</h1>
+            </div>
+            <p className="text-sm text-slate-500 max-w-sm">
+              解体業界における「借りる・買う」の流動性を高め、資産の有効活用と現場の生産性向上を支援するプラットフォームです。
+            </p>
+          </div>
+          <div>
+            <h4 className="font-bold text-slate-800 mb-4 text-sm">カテゴリー</h4>
+            <ul className="text-sm text-slate-500 space-y-2">
+              <li>重機</li>
+              <li>ダンプカー</li>
+              <li>アタッチメント</li>
+              <li>「探しています」投稿</li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-bold text-slate-800 mb-4 text-sm">サポート</h4>
+            <ul className="text-sm text-slate-500 space-y-2">
+              <li>利用規約</li>
+              <li>プライバシーポリシー</li>
+              <li>お問い合わせ</li>
+              <li>運営会社</li>
+            </ul>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
