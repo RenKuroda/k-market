@@ -6,18 +6,18 @@ import { MOCK_USER } from './constants';
 import { Machine, User, DealType, MachineCategory } from './types';
 import { supabase } from './lib/supabaseClient';
 import { useMe } from './lib/useMe';
-import {
-  Search,
-  Menu,
-  LogIn,
-  PlusCircle,
-  MessageSquare,
-  User as UserIcon,
-  ChevronRight,
+import { 
+  Search, 
+  Menu, 
+  LogIn, 
+  PlusCircle, 
+  MessageSquare, 
+  User as UserIcon, 
+  ChevronRight, 
   ChevronDown,
-  History,
-  MapPin,
-  Factory,
+  History, 
+  MapPin, 
+  Factory, 
   ShieldCheck,
   Star,
   Lock,
@@ -72,9 +72,9 @@ const MachineCard: React.FC<{ machine: Machine; onClick: () => void }> = ({ mach
         <img src={machine.thumbnail} alt={machine.name} className="w-full h-full object-cover" />
       </div>
       <div className="p-3">
-        {/* 1行目：タイトル */}
+        {/* 1行目：タイトル（モバイルでは小さめフォントで約10文字＋…を想定） */}
         <div className="flex items-start justify-between mb-1.5">
-          <h3 className="font-bold text-slate-800 text-base sm:text-lg line-clamp-1">
+          <h3 className="font-bold text-slate-800 text-xs sm:text-base leading-tight line-clamp-1">
             {machine.name}
           </h3>
           {machine.rentHistoryCount > 0 && (
@@ -85,16 +85,11 @@ const MachineCard: React.FC<{ machine: Machine; onClick: () => void }> = ({ mach
           )}
         </div>
 
-        {/* 2行目：サイズ | 都道府県（1行で収まるよう小さめに） */}
-        <div className="mb-2 text-[11px] text-slate-500 flex items-center whitespace-nowrap">
-          <span className="whitespace-nowrap">
-            サイズ <span className="font-semibold text-slate-700">{machine.size}</span>
-          </span>
+        {/* 2行目：サイズ | エリア（シンプルに値だけ表示） */}
+        <div className="mb-2 text-[10px] sm:text-xs text-slate-500 whitespace-nowrap">
+          <span className="font-semibold text-slate-700">{machine.size}</span>
           <span className="mx-1 text-slate-300">|</span>
-          <span className="inline-flex items-center text-slate-500 whitespace-nowrap">
-            <MapPin size={11} className="mr-0.5 text-slate-400" />
-            {machine.location}
-          </span>
+          <span>{machine.location}</span>
         </div>
 
         {/* 3行目：金額ブロック（PC/タブレットのみ表示） */}
@@ -134,20 +129,16 @@ const MachineCard: React.FC<{ machine: Machine; onClick: () => void }> = ({ mach
           </>
         )}
 
-        {/* 最下部：レンタル可 / 売買可（2行固定・濃い紺色の帯）※PC版では非表示 */}
-        <div className="mt-3 -mx-3 -mb-3 bg-slate-900 text-white text-[11px] px-3 py-2 space-y-1 lg:hidden">
-          <div className="flex items-baseline justify-between">
-            <span className="font-semibold text-slate-200">レンタル可：</span>
-            <span className="font-bold">
+        {/* 最下部：レンタル可 / 売買可（スマホ専用・4行表示）※PC版では非表示 */}
+        <div className="mt-3 -mx-3 -mb-3 bg-slate-900 text-white text-[11px] px-3 py-3 space-y-0.5 lg:hidden">
+          <p className="font-semibold text-slate-200 text-left">レンタル可：</p>
+          <p className="font-bold text-right">
               {rentalDisplayPrice ? `${rentalDisplayPrice}〜` : '-'}
-            </span>
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="font-semibold text-slate-200">売買可：</span>
-            <span className="font-bold">
+          </p>
+          <p className="mt-1 font-semibold text-slate-200 text-left">売買可：</p>
+          <p className="font-bold text-right">
               {saleDisplayPrice ? `${saleDisplayPrice}〜` : '-'}
-            </span>
-          </div>
+          </p>
         </div>
       </div>
     </div>
@@ -176,8 +167,8 @@ const Header: React.FC<{
   return (
     <header className="sticky top-0 z-50 bg-slate-900 text-white shadow-sm">
       <div className="w-full px-4 py-3 flex items-center justify-between gap-3">
-        {/* 左側：ロゴ + 検索 + カテゴリ + エリア */}
-        <div className="flex items-center gap-10 flex-1 min-w-0">
+        {/* 左側：ロゴ + 検索 + カテゴリ */}
+        <div className="flex items-center gap-3 flex-1 min-w-0 sm:gap-8">
           {/* ロゴ */}
           <div className="flex items-center gap-2 flex-none">
             <div className="bg-white text-slate-900 p-1.5 rounded-lg font-black tracking-tighter">
@@ -186,8 +177,8 @@ const Header: React.FC<{
         <h1 className="text-lg font-bold tracking-tight hidden sm:block">K-Market</h1>
       </div>
       
-          {/* 検索 */}
-          <div className="relative w-[300px] flex-none">
+          {/* 検索（スマホではかなりコンパクトな幅、PCでは固定幅） */}
+          <div className="relative w-[190px] sm:w-[300px] flex-none ml-2 sm:ml-0">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
               size={18}
@@ -195,13 +186,13 @@ const Header: React.FC<{
             <input
               type="text"
               placeholder="メーカー、型式、アタッチメント名..."
-              className="w-full bg-white/10 border border-white/20 rounded-full py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-white/30 transition-all"
+              className="w-full bg-white/10 border border-white/20 rounded-full py-2.5 pl-10 pr-4 text-xs sm:text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-white/30 transition-all"
               value={searchQuery}
               onChange={(e) => onChangeSearch(e.target.value)}
             />
           </div>
 
-          {/* カテゴリ（タブ風） */}
+          {/* カテゴリ（タブ風：PCのみ表示） */}
           <div className="hidden md:flex items-end gap-6 flex-none">
             {[
               { id: 'all', label: 'すべて' },
@@ -977,33 +968,33 @@ export default function App() {
         {/* Filter Tabs (取引形態） + 絞り込み */}
         <section className="mb-6">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {[
-                { id: 'all', label: 'すべて' },
-                { id: 'rent', label: 'レンタル' },
-                { id: 'sale', label: '売買' },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {[
+              { id: 'all', label: 'すべて' },
+              { id: 'rent', label: 'レンタル' },
+              { id: 'sale', label: '売買' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
                   type="button"
-                  onClick={() => setDealFilter(tab.id as any)}
-                  className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold border transition-all ${
-                    dealFilter === tab.id
-                      ? 'bg-slate-900 text-white border-slate-900'
-                      : 'bg-white text-slate-600 border-slate-200'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+                onClick={() => setDealFilter(tab.id as any)}
+                  className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                  dealFilter === tab.id 
+                    ? 'bg-slate-900 text-white border-slate-900' 
+                    : 'bg-white text-slate-600 border-slate-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
             </div>
             <button
               type="button"
               onClick={() => setIsFilterOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm"
+              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm"
             >
               <SlidersHorizontal size={14} />
-              <span>絞り込み</span>
+              <span className="whitespace-nowrap">絞り込み</span>
             </button>
           </div>
         </section>
@@ -1754,7 +1745,7 @@ export default function App() {
           <Home size={22} />
           <span className="text-[10px] font-bold">ホーム</span>
         </button>
-        <button
+        <button 
           type="button"
           onClick={handleOpenPost}
           className="flex-1 flex flex-col items-center gap-1 text-slate-900"
