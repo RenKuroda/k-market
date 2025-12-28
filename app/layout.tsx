@@ -14,6 +14,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         {/* Tailwind CDN（MVP段階ではCDN利用。将来的にビルド型Tailwindへ移行予定） */}
         <script src="https://cdn.tailwindcss.com" />
+        {/* モバイルの入力フォーカス時に自動ズームされないよう、フォーム要素のフォントサイズを16px以上に固定 */}
+        <style>{`
+          input, select, textarea {
+            font-size: 16px !important;
+          }
+        `}</style>
       </head>
       <body className="bg-slate-50 text-slate-900">{children}</body>
     </html>

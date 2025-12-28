@@ -687,7 +687,6 @@ export default function SupplierDashboardPage() {
                     type="file"
                     accept="image/*"
                     multiple
-                    capture="environment"
                     className="hidden"
                     onChange={handleChangeEditImages}
                   />

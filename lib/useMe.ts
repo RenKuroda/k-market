@@ -22,6 +22,7 @@ export type Company = {
   status: CompanyStatus;
   prefecture: string | null;
   city: string | null;
+  phone: string | null;
 };
 
 export type Me = {
@@ -104,7 +105,7 @@ export function useMe(): UseMeResult {
     if (profile?.company_id) {
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
-        .select('id, name, company_type, status, prefecture, city')
+        .select('id, name, company_type, status, prefecture, city, phone')
         .eq('id', profile.company_id)
         .maybeSingle<Company>();
 

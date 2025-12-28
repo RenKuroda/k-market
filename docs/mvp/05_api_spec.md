@@ -59,7 +59,8 @@
     "company_type": "DEMAND|SUPPLY|BOTH",
     "status": "ACTIVE|INACTIVE",
     "prefecture": "string|null",
-    "city": "string|null"
+    "city": "string|null",
+    "phone": "string|null"
   },
   "UserProfile": {
     "id": "uuid(auth.users.id)",
@@ -90,7 +91,8 @@
     "name": "Kuroda Demolition Co., Ltd.",
     "company_type": "DEMAND",
     "prefecture": "東京都",
-    "city": "江東区"
+    "city": "江東区",
+    "phone": "03-1234-5678"
   },
   "user": {
     "name": "黒田 レン",
@@ -106,7 +108,13 @@
 {
   "data": {
     "user": { "id": "uuid", "name": "黒田 レン", "role": "COMPANY_ADMIN", "company_id": "uuid" },
-    "company": { "id": "uuid", "name": "Kuroda Demolition Co., Ltd.", "company_type": "DEMAND", "status": "ACTIVE" }
+    "company": {
+      "id": "uuid",
+      "name": "Kuroda Demolition Co., Ltd.",
+      "company_type": "DEMAND",
+      "status": "ACTIVE",
+      "phone": "03-1234-5678"
+    }
   }
 }
 ```
@@ -129,7 +137,13 @@
 {
   "data": {
     "user": { "id": "uuid", "name": "黒田 レン", "role": "COMPANY_ADMIN", "company_id": "uuid" },
-    "company": { "id": "uuid", "name": "Kuroda Demolition Co., Ltd.", "company_type": "DEMAND", "status": "ACTIVE" }
+    "company": {
+      "id": "uuid",
+      "name": "Kuroda Demolition Co., Ltd.",
+      "company_type": "DEMAND",
+      "status": "ACTIVE",
+      "phone": "03-1234-5678"
+    }
   }
 }
 ```
@@ -146,7 +160,13 @@
 {
   "data": {
     "user": { "id": "uuid", "name": "黒田 レン", "role": "COMPANY_ADMIN", "company_id": "uuid" },
-    "company": { "id": "uuid", "name": "Kuroda Demolition Co., Ltd.", "company_type": "DEMAND", "status": "ACTIVE" }
+    "company": {
+      "id": "uuid",
+      "name": "Kuroda Demolition Co., Ltd.",
+      "company_type": "DEMAND",
+      "status": "ACTIVE",
+      "phone": "03-1234-5678"
+    }
   }
 }
 ```

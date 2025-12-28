@@ -56,12 +56,10 @@ const MachineCard: React.FC<{ machine: Machine; onClick: () => void }> = ({ mach
   };
 
   // 下部2行の金額テキスト
-  const rentalDisplayPrice = machine.dealTypes.includes('RENTAL')
-    ? formatPriceMan(machine.priceRental ?? null)
-    : null;
-  const saleDisplayPrice = machine.dealTypes.includes('SALE')
-    ? formatPriceMan(machine.priceSale ?? null)
-    : null;
+  const isRentalEnabled = machine.dealTypes.includes('RENTAL');
+  const isSaleEnabled = machine.dealTypes.includes('SALE');
+  const rentalDisplayPrice = isRentalEnabled ? formatPriceMan(machine.priceRental ?? null) : null;
+  const saleDisplayPrice = isSaleEnabled ? formatPriceMan(machine.priceSale ?? null) : null;
 
   return (
     <div 
@@ -71,9 +69,9 @@ const MachineCard: React.FC<{ machine: Machine; onClick: () => void }> = ({ mach
       <div className="relative aspect-[4/3]">
         <img src={machine.thumbnail} alt={machine.name} className="w-full h-full object-cover" />
       </div>
-      <div className="p-3">
+      <div className="px-2 pt-1 pb-3">
         {/* 1行目：タイトル（モバイルでは小さめフォントで約10文字＋…を想定） */}
-        <div className="flex items-start justify-between mb-1.5">
+        <div className="flex items-start justify-between mb-0.5">
           <h3 className="font-bold text-slate-800 text-xs sm:text-base leading-tight line-clamp-1">
             {machine.name}
           </h3>
@@ -86,7 +84,7 @@ const MachineCard: React.FC<{ machine: Machine; onClick: () => void }> = ({ mach
         </div>
 
         {/* 2行目：サイズ | エリア（シンプルに値だけ表示） */}
-        <div className="mb-2 text-[10px] sm:text-xs text-slate-500 whitespace-nowrap">
+        <div className="mb-0.5 text-[10px] sm:text-xs text-slate-500 whitespace-nowrap">
           <span className="font-semibold text-slate-700">{machine.size}</span>
           <span className="mx-1 text-slate-300">|</span>
           <span>{machine.location}</span>
@@ -129,15 +127,35 @@ const MachineCard: React.FC<{ machine: Machine; onClick: () => void }> = ({ mach
           </>
         )}
 
-        {/* 最下部：レンタル可 / 売買可（スマホ専用・4行表示）※PC版では非表示 */}
-        <div className="mt-3 -mx-3 -mb-3 bg-slate-900 text-white text-[11px] px-3 py-3 space-y-0.5 lg:hidden">
-          <p className="font-semibold text-slate-200 text-left">レンタル可：</p>
-          <p className="font-bold text-right">
-              {rentalDisplayPrice ? `${rentalDisplayPrice}〜` : '-'}
+        {/* 最下部：レンタル可否 / 売買可否（スマホ専用・4行表示）※PC版では非表示 */}
+        <div className="mt-2 -mx-3 -mb-3 bg-slate-900 text-white text-[10px] px-3 py-2 space-y-0 lg:hidden">
+          <p
+            className={`text-left leading-tight ${
+              isRentalEnabled ? 'font-semibold text-slate-200' : 'text-slate-500'
+            }`}
+          >
+            レンタル{isRentalEnabled ? '可' : '不可'}：
           </p>
-          <p className="mt-1 font-semibold text-slate-200 text-left">売買可：</p>
-          <p className="font-bold text-right">
-              {saleDisplayPrice ? `${saleDisplayPrice}〜` : '-'}
+          <p
+            className={`text-right leading-tight ${
+              isRentalEnabled ? 'font-bold' : 'text-slate-500'
+            }`}
+          >
+            {isRentalEnabled && rentalDisplayPrice ? `${rentalDisplayPrice}〜` : '-'}
+          </p>
+          <p
+            className={`mt-0.5 text-left leading-tight ${
+              isSaleEnabled ? 'font-semibold text-slate-200' : 'text-slate-500'
+            }`}
+          >
+            売買{isSaleEnabled ? '可' : '不可'}：
+          </p>
+          <p
+            className={`text-right leading-tight ${
+              isSaleEnabled ? 'font-bold' : 'text-slate-500'
+            }`}
+          >
+            {isSaleEnabled && saleDisplayPrice ? `${saleDisplayPrice}〜` : '-'}
           </p>
         </div>
       </div>
@@ -372,6 +390,77 @@ const AreaFilter: React.FC<{
                 ))}
               </div>
             </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ALL_PREFECTURES: string[] = PREFECTURE_GROUPS.reduce(
+  (acc, group) => acc.concat(group.prefectures),
+  [] as string[],
+);
+
+const PrefectureSelect: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
+}> = ({ value, onChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const displayLabel = value || '選択してください';
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen((v) => !v)}
+        className="w-full flex items-center justify-end gap-2 bg-transparent text-right text-sm text-slate-900 focus:outline-none"
+      >
+        <span
+          className={`truncate ${
+            value ? 'text-slate-900' : 'text-slate-400'
+          }`}
+        >
+          {displayLabel}
+        </span>
+        <ChevronDown size={14} className="text-slate-400 flex-shrink-0" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 mt-2 w-full max-h-72 overflow-y-auto rounded-xl bg-white text-slate-900 shadow-xl z-50 border border-slate-200">
+          {ALL_PREFECTURES.map((pref) => (
+            <button
+              key={pref}
+              type="button"
+              onClick={() => {
+                onChange(pref);
+                setIsOpen(false);
+              }}
+              className={`w-full px-3 py-2 text-left text-sm ${
+                value === pref
+                  ? 'bg-slate-900 text-white font-bold'
+                  : 'hover:bg-slate-100 text-slate-700'
+              }`}
+            >
+              {pref}
+            </button>
           ))}
         </div>
       )}
@@ -1349,7 +1438,6 @@ export default function App() {
                   type="file"
                   accept="image/*"
                   multiple
-                  capture="environment"
                   className="hidden"
                   onChange={handleChangeImages}
                 />
@@ -1364,60 +1452,9 @@ export default function App() {
                   <span>都道府県</span>
                   <span className="text-red-500 align-middle">*</span>
                 </label>
-                <select
-                  className="flex-1 bg-transparent border-none text-right text-sm text-slate-900 focus:outline-none focus:ring-0"
-                  value={postPrefecture}
-                  onChange={(e) => setPostPrefecture(e.target.value)}
-                >
-                  <option value="">選択してください</option>
-                  <option value="北海道">北海道</option>
-                  <option value="青森県">青森県</option>
-                  <option value="岩手県">岩手県</option>
-                  <option value="宮城県">宮城県</option>
-                  <option value="秋田県">秋田県</option>
-                  <option value="山形県">山形県</option>
-                  <option value="福島県">福島県</option>
-                  <option value="茨城県">茨城県</option>
-                  <option value="栃木県">栃木県</option>
-                  <option value="群馬県">群馬県</option>
-                  <option value="埼玉県">埼玉県</option>
-                  <option value="千葉県">千葉県</option>
-                  <option value="東京都">東京都</option>
-                  <option value="神奈川県">神奈川県</option>
-                  <option value="新潟県">新潟県</option>
-                  <option value="富山県">富山県</option>
-                  <option value="石川県">石川県</option>
-                  <option value="福井県">福井県</option>
-                  <option value="山梨県">山梨県</option>
-                  <option value="長野県">長野県</option>
-                  <option value="岐阜県">岐阜県</option>
-                  <option value="静岡県">静岡県</option>
-                  <option value="愛知県">愛知県</option>
-                  <option value="三重県">三重県</option>
-                  <option value="滋賀県">滋賀県</option>
-                  <option value="京都府">京都府</option>
-                  <option value="大阪府">大阪府</option>
-                  <option value="兵庫県">兵庫県</option>
-                  <option value="奈良県">奈良県</option>
-                  <option value="和歌山県">和歌山県</option>
-                  <option value="鳥取県">鳥取県</option>
-                  <option value="島根県">島根県</option>
-                  <option value="岡山県">岡山県</option>
-                  <option value="広島県">広島県</option>
-                  <option value="山口県">山口県</option>
-                  <option value="徳島県">徳島県</option>
-                  <option value="香川県">香川県</option>
-                  <option value="愛媛県">愛媛県</option>
-                  <option value="高知県">高知県</option>
-                  <option value="福岡県">福岡県</option>
-                  <option value="佐賀県">佐賀県</option>
-                  <option value="長崎県">長崎県</option>
-                  <option value="熊本県">熊本県</option>
-                  <option value="大分県">大分県</option>
-                  <option value="宮崎県">宮崎県</option>
-                  <option value="鹿児島県">鹿児島県</option>
-                  <option value="沖縄県">沖縄県</option>
-                </select>
+                <div className="flex-1">
+                  <PrefectureSelect value={postPrefecture} onChange={setPostPrefecture} />
+                </div>
               </div>
 
               {/* 商材カテゴリー */}
@@ -1606,17 +1643,17 @@ export default function App() {
               {/* レンタル条件 */}
               {postDealRental && (
                 <div className="mt-2 space-y-3 rounded-2xl bg-slate-50 border border-slate-200 p-4">
-                  {/* レンタル金額（メイン） */}
-                  <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-1 text-xs font-bold text-slate-500 whitespace-nowrap">
-                      <span>レンタル金額（税込）</span>
-                      <span className="text-red-500 align-middle">*</span>
+                  {/* レンタル金額（メイン） - ラベルと入力を2行構成に */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-slate-500">
+                      レンタル金額（税込）
+                      <span className="ml-1 text-red-500 align-middle">*</span>
                     </label>
-                    <div className="flex flex-1 gap-2">
-                    <input
+                    <div className="flex gap-2">
+                      <input
                         type="text"
                         inputMode="numeric"
-                        className="w-full border border-slate-200 rounded-lg p-3 text-sm"
+                        className="flex-1 border border-slate-200 rounded-lg p-3 text-sm"
                         placeholder="例：18,000"
                         value={postRentalPrice}
                         onChange={(e) => {
@@ -1628,15 +1665,13 @@ export default function App() {
                       <select
                         className="w-24 border border-slate-200 rounded-lg p-2 text-xs"
                         value={postRentalUnit}
-                        onChange={(e) =>
-                          setPostRentalUnit(e.target.value as 'DAY' | 'MONTH')
-                        }
+                        onChange={(e) => setPostRentalUnit(e.target.value as 'DAY' | 'MONTH')}
                       >
                         <option value="DAY">日額</option>
                         <option value="MONTH">月額</option>
                       </select>
-                </div>
-              </div>
+                    </div>
+                  </div>
 
                   {/* レンタルの補足条件（サブ） */}
                   <div className="space-y-2 pl-2">
@@ -1683,15 +1718,15 @@ export default function App() {
 
               {/* 売買条件 */}
               {postDealSale && (
-                <div className="mt-2 flex items-center gap-3 rounded-2xl bg-slate-50 border border-slate-200 p-4">
-                  <label className="flex items-center gap-1 text-xs font-bold text-slate-500 whitespace-nowrap">
-                    <span>売買参考価格（税込）</span>
-                    <span className="text-red-500 align-middle">*</span>
+                <div className="mt-2 rounded-2xl bg-slate-50 border border-slate-200 p-4 space-y-2">
+                  <label className="block text-xs font-bold text-slate-500">
+                    売買参考価格（税込）
+                    <span className="ml-1 text-red-500 align-middle">*</span>
                   </label>
                   <input
                     type="text"
                     inputMode="numeric"
-                    className="flex-1 border border-slate-200 rounded-lg p-3 text-sm"
+                    className="w-full border border-slate-200 rounded-lg p-3 text-sm"
                     placeholder="例：8,500,000"
                     value={postSalePrice}
                     onChange={(e) => {

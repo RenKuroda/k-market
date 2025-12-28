@@ -46,6 +46,7 @@ erDiagram
   - `status` ('ACTIVE' | 'INACTIVE')
   - `prefecture` (text, optional)
   - `city` (text, optional)
+   - `phone` (text, optional) ※代表電話番号
   - `created_at`, `updated_at`
 - **リレーション**
   - 1:N → `public.users`

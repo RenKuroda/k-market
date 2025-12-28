@@ -21,9 +21,10 @@ export default function AuthPage() {
   // signup fields（MVP最小）
   const [userName, setUserName] = useState('');
   const [companyName, setCompanyName] = useState('');
-  const [companyType, setCompanyType] = useState<CompanyType>('DEMAND');
+  const [companyType, setCompanyType] = useState<CompanyType | ''>('');
   const [prefecture, setPrefecture] = useState('');
   const [city, setCity] = useState('');
+  const [phone, setPhone] = useState('');
 
   const [message, setMessage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -54,14 +55,22 @@ export default function AuthPage() {
       }
 
       // signup: Server Action（Service Role）で companies / public.users を自動作成
+      if (!companyType) {
+        throw new Error('「どちらで登録しますか？」を選択してください。');
+      }
+      if (!phone.trim()) {
+        throw new Error('電話番号を入力してください。');
+      }
+
       const result = await signUpWithCompany({
         email,
         password,
         userName,
         companyName,
-        companyType,
+        companyType: companyType as CompanyType,
         prefecture,
         city,
+        phone,
       });
       if (!result.ok) throw new Error(result.error);
 
@@ -128,34 +137,26 @@ export default function AuthPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {mode === 'signup' && (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 mb-1">担当者名</label>
-                      <input
-                        type="text"
-                        required
-                        value={userName}
-                        onChange={(e) => setUserName(e.target.value)}
-                        className="w-full border border-slate-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/20"
-                        placeholder="例）黒田 レン"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 mb-1">会社区分</label>
-                      <select
-                        value={companyType}
-                        onChange={(e) => setCompanyType(e.target.value as CompanyType)}
-                        className="w-full border border-slate-200 rounded-lg p-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/20"
-                      >
-                        <option value="DEMAND">需要側（借りたい/買いたい）</option>
-                        <option value="SUPPLY">供給側（貸したい/売りたい）</option>
-                        <option value="BOTH">両方</option>
-                      </select>
-                    </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      担当者名
+                      <span className="ml-1 text-red-500 align-middle">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={userName}
+                      onChange={(e) => setUserName(e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/20"
+                      placeholder="例）黒田 レン"
+                    />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">会社名</label>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      会社名
+                      <span className="ml-1 text-red-500 align-middle">*</span>
+                    </label>
                     <input
                       type="text"
                       required
@@ -168,9 +169,13 @@ export default function AuthPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 mb-1">都道府県（任意）</label>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        都道府県
+                        <span className="ml-1 text-red-500 align-middle">*</span>
+                      </label>
                       <input
                         type="text"
+                        required
                         value={prefecture}
                         onChange={(e) => setPrefecture(e.target.value)}
                         className="w-full border border-slate-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/20"
@@ -178,9 +183,13 @@ export default function AuthPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 mb-1">市区町村（任意）</label>
+                      <label className="block text-xs font-bold text-slate-500 mb-1">
+                        市区町村
+                        <span className="ml-1 text-red-500 align-middle">*</span>
+                      </label>
                       <input
                         type="text"
+                        required
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
                         className="w-full border border-slate-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/20"
@@ -188,11 +197,49 @@ export default function AuthPage() {
                       />
                     </div>
                   </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      どちらで登録しますか？
+                      <span className="ml-1 text-red-500 align-middle">*</span>
+                    </label>
+                    <select
+                      required
+                      value={companyType}
+                      onChange={(e) =>
+                        setCompanyType(e.target.value as CompanyType | '')
+                      }
+                      className="w-full border border-slate-200 rounded-lg p-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/20"
+                    >
+                      <option value="">選択してください</option>
+                      <option value="DEMAND">借りたい/買いたい</option>
+                      <option value="SUPPLY">貸したい/売りたい</option>
+                      <option value="BOTH">両方</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">
+                      電話番号
+                      <span className="ml-1 text-red-500 align-middle">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/20"
+                      placeholder="例）03-1234-5678"
+                    />
+                  </div>
                 </>
               )}
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Email</label>
+                <label className="block text-xs font-bold text-slate-500 mb-1">
+                  Email
+                  <span className="ml-1 text-red-500 align-middle">*</span>
+                </label>
                 <input
                   type="email"
                   required
@@ -203,7 +250,10 @@ export default function AuthPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Password</label>
+                <label className="block text-xs font-bold text-slate-500 mb-1">
+                  Password
+                  <span className="ml-1 text-red-500 align-middle">*</span>
+                </label>
                 <input
                   type="password"
                   required

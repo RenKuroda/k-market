@@ -10,8 +10,9 @@ export type SignUpWithCompanyInput = {
   userName: string;
   companyName: string;
   companyType: CompanyType;
-  prefecture?: string;
-  city?: string;
+  prefecture: string;
+  city: string;
+  phone: string;
 };
 
 export type SignUpWithCompanyResult =
@@ -40,11 +41,17 @@ export async function signUpWithCompany(input: SignUpWithCompanyInput): Promise<
   const userName = input.userName.trim();
   const companyName = input.companyName.trim();
   const companyType = input.companyType;
+  const phone = input.phone.trim();
+  const prefecture = normalizeOptionalText(input.prefecture);
+  const city = normalizeOptionalText(input.city);
 
   if (!email) return { ok: false, error: 'email が空です' };
   if (!password) return { ok: false, error: 'password が空です' };
   if (!userName) return { ok: false, error: '担当者名（userName）が空です' };
   if (!companyName) return { ok: false, error: '会社名（companyName）が空です' };
+  if (!phone) return { ok: false, error: '電話番号（phone）が空です' };
+  if (!prefecture) return { ok: false, error: '都道府県（prefecture）が空です' };
+  if (!city) return { ok: false, error: '市区町村（city）が空です' };
   if (!isCompanyType(companyType)) return { ok: false, error: 'companyType が不正です' };
 
   // 1) auth.users を作成（Service Role）
@@ -69,8 +76,9 @@ export async function signUpWithCompany(input: SignUpWithCompanyInput): Promise<
       name: companyName,
       company_type: companyType,
       status: 'ACTIVE',
-      prefecture: normalizeOptionalText(input.prefecture),
-      city: normalizeOptionalText(input.city),
+      prefecture,
+      city,
+      phone,
     })
     .select('id')
     .single<{ id: string }>();

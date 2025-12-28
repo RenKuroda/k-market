@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Heart, History, LogOut, Truck } from 'lucide-react';
+import { ArrowLeft, Heart, History, LogOut, ShieldCheck, Truck } from 'lucide-react';
 import { useMe } from '../../lib/useMe';
 import { MOCK_USER } from '../../constants';
 import { User } from '../../types';
@@ -50,6 +50,7 @@ function MePageContent() {
   const [userName, setUserName] = useState('');
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [companyPhone, setCompanyPhone] = useState('');
   const [favorites, setFavorites] = useState<FavoriteRow[]>([]);
   const [favError, setFavError] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -123,6 +124,7 @@ function MePageContent() {
       setUserName(me.profile?.name ?? '');
       setEmail(me.email ?? '');
       setDisplayName(me.displayName ?? me.profile?.name ?? '');
+      setCompanyPhone(me.company?.phone ?? '');
     }
   }, [me]);
 
@@ -145,6 +147,7 @@ function MePageContent() {
       const trimmedUserName = userName.trim();
       const trimmedEmail = email.trim();
       const trimmedDisplayName = displayName.trim();
+      const trimmedCompanyPhone = companyPhone.trim();
 
       if (!trimmedUserName) {
         throw new Error('USER（担当者名）を入力してください。');
@@ -157,6 +160,17 @@ function MePageContent() {
         .eq('id', me.authUserId);
       if (profileError) {
         throw profileError;
+      }
+
+      // companies テーブルの電話番号を更新
+      if (me.company?.id) {
+        const { error: companyError } = await supabase
+          .from('companies')
+          .update({ phone: trimmedCompanyPhone || null })
+          .eq('id', me.company.id);
+        if (companyError) {
+          throw companyError;
+        }
       }
 
       // auth.users の email / user_metadata.display_name を更新
@@ -403,6 +417,15 @@ function MePageContent() {
                   <p className="font-bold text-slate-900">{me?.company?.name ?? '未設定'}</p>
                 </div>
                 <div>
+                  <p className="text-xs text-slate-500 font-bold mb-1">電話番号</p>
+                  <input
+                    type="tel"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-slate-300"
+                    value={companyPhone}
+                    onChange={(e) => setCompanyPhone(e.target.value)}
+                  />
+                </div>
+                <div>
                   <p className="text-xs text-slate-500 font-bold mb-1">USER</p>
                   <input
                     type="text"
@@ -484,6 +507,29 @@ function MePageContent() {
             </Link>
           </div>
         </section>
+
+        {/* 運営メニュー（PLATFORM_ADMIN のみ） */}
+        {me?.profile?.role === 'PLATFORM_ADMIN' && (
+          <section>
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-white">
+                  <ShieldCheck size={18} />
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-slate-800">運営管理</p>
+                  <p className="text-sm text-slate-500 mt-0.5">登録ユーザーの一覧などを確認できます</p>
+                </div>
+              </div>
+              <Link
+                href="/admin"
+                className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-6 py-3 text-base font-bold text-white hover:bg-slate-800"
+              >
+                運営画面を開く
+              </Link>
+            </div>
+          </section>
+        )}
 
         {/* いいね！一覧 */}
         <section>
