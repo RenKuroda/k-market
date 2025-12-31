@@ -50,6 +50,7 @@ function MePageContent() {
   const [userName, setUserName] = useState('');
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [companyPhone, setCompanyPhone] = useState('');
   const [favorites, setFavorites] = useState<FavoriteRow[]>([]);
   const [favError, setFavError] = useState<string | null>(null);
@@ -124,6 +125,8 @@ function MePageContent() {
       setUserName(me.profile?.name ?? '');
       setEmail(me.email ?? '');
       setDisplayName(me.displayName ?? me.profile?.name ?? '');
+      // 会社情報（存在する場合のみ）
+      setCompanyName(me.company?.name ?? '');
       setCompanyPhone(me.company?.phone ?? '');
     }
   }, [me]);
@@ -147,6 +150,7 @@ function MePageContent() {
       const trimmedUserName = userName.trim();
       const trimmedEmail = email.trim();
       const trimmedDisplayName = displayName.trim();
+      const trimmedCompanyName = companyName.trim();
       const trimmedCompanyPhone = companyPhone.trim();
 
       if (!trimmedUserName) {
@@ -162,14 +166,43 @@ function MePageContent() {
         throw profileError;
       }
 
-      // companies テーブルの電話番号を更新
+      // companies テーブルの会社名・電話番号を更新 or 作成
       if (me.company?.id) {
+        // 既存会社がある場合は更新
         const { error: companyError } = await supabase
           .from('companies')
-          .update({ phone: trimmedCompanyPhone || null })
+          .update({
+            name: trimmedCompanyName || me.company.name,
+            phone: trimmedCompanyPhone || null,
+          })
           .eq('id', me.company.id);
         if (companyError) {
           throw companyError;
+        }
+      } else if (trimmedCompanyName) {
+        // 会社が未設定の場合は簡易的な会社レコードを作成して紐付け
+        const { data: company, error: createCompanyError } = await supabase
+          .from('companies')
+          .insert({
+            name: trimmedCompanyName,
+            company_type: 'DEMAND',
+            status: 'ACTIVE',
+            prefecture: null,
+            city: null,
+            phone: trimmedCompanyPhone || null,
+          })
+          .select('id')
+          .single<{ id: string }>();
+        if (createCompanyError || !company) {
+          throw createCompanyError ?? new Error('会社情報の作成に失敗しました。');
+        }
+
+        const { error: linkError } = await supabase
+          .from('users')
+          .update({ company_id: company.id })
+          .eq('id', me.authUserId);
+        if (linkError) {
+          throw linkError;
         }
       }
 
@@ -414,7 +447,13 @@ function MePageContent() {
               <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 text-base">
                 <div>
                   <p className="text-xs text-slate-500 font-bold mb-1">会社名</p>
-                  <p className="font-bold text-slate-900">{me?.company?.name ?? '未設定'}</p>
+                  <input
+                    type="text"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-slate-300"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="未設定"
+                  />
                 </div>
                 <div>
                   <p className="text-xs text-slate-500 font-bold mb-1">電話番号</p>

@@ -15,6 +15,7 @@ import {
   User as UserIcon, 
   ChevronRight, 
   ChevronDown,
+  ChevronLeft,
   History, 
   MapPin, 
   Factory, 
@@ -92,39 +93,60 @@ const MachineCard: React.FC<{ machine: Machine; onClick: () => void }> = ({ mach
 
         {/* 3行目：金額ブロック（PC/タブレットのみ表示） */}
         {(machine.priceRental != null || machine.priceSale != null) && (
-          <>
-            <div className="bg-slate-900 text-white p-3 rounded-xl hidden sm:block">
-              {machine.priceRental != null && (
-                <div
-                  className={`flex justify-between items-baseline ${
-                    machine.priceSale != null ? 'mb-1.5' : ''
-                  }`}
-                >
-                  <span className="text-sm font-semibold text-slate-200 whitespace-nowrap">
-                    レンタル目安
-                    {machine.rentalUnit === 'MONTH'
-                      ? '（月額）'
-                      : machine.rentalUnit === 'DAY'
-                      ? '（日額）'
-                      : ''}
-                  </span>
-                  <span className="text-xl font-black whitespace-nowrap">
+          <div className="bg-slate-900 text-white p-3 rounded-xl hidden sm:block">
+            {/* レンタル行（不可のときも明示） */}
+            <div
+              className={`flex justify-between items-baseline ${
+                machine.priceSale != null ? 'mb-1.5' : ''
+              }`}
+            >
+              <span className="text-sm font-semibold text-slate-200 whitespace-nowrap">
+                レンタル目安
+                {machine.rentalUnit === 'MONTH'
+                  ? '（月額）'
+                  : machine.rentalUnit === 'DAY'
+                  ? '（日額）'
+                  : ''}
+              </span>
+              <span
+                className={`whitespace-nowrap ${
+                  isRentalEnabled && machine.priceRental != null
+                    ? 'text-xl font-black'
+                    : 'text-sm font-semibold text-slate-500'
+                }`}
+              >
+                {isRentalEnabled && machine.priceRental != null ? (
+                  <>
                     ¥{machine.priceRental.toLocaleString()}
                     <span className="text-xs font-normal">〜</span>
-                  </span>
-                </div>
-              )}
-              {machine.priceSale != null && (
-                <div className="flex justify-between items-baseline border-t border-white/10 pt-1.5 mt-1.5">
-                  <span className="text-sm font-semibold text-slate-200">売買参考価格</span>
-                  <span className="text-xl font-black">
+                  </>
+                ) : (
+                  '不可'
+                )}
+              </span>
+            </div>
+
+            {/* 売買行（不可のときも明示） */}
+            <div className="flex justify-between items-baseline border-t border-white/10 pt-1.5 mt-1.5">
+              <span className="text-sm font-semibold text-slate-200">売買参考価格</span>
+              <span
+                className={`whitespace-nowrap ${
+                  isSaleEnabled && machine.priceSale != null
+                    ? 'text-xl font-black'
+                    : 'text-sm font-semibold text-slate-500'
+                }`}
+              >
+                {isSaleEnabled && machine.priceSale != null ? (
+                  <>
                     ¥{machine.priceSale.toLocaleString()}
                     <span className="text-xs font-normal">〜</span>
-                  </span>
-                </div>
-              )}
+                  </>
+                ) : (
+                  '不可'
+                )}
+              </span>
             </div>
-          </>
+          </div>
         )}
 
         {/* 最下部：レンタル可否 / 売買可否（スマホ専用・4行表示）※PC版では非表示 */}
@@ -616,6 +638,8 @@ export default function App() {
     : '';
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [detailImageIndex, setDetailImageIndex] = useState(0);
+  const detailImageTouchStartXRef = useRef<number | null>(null);
 
   const makerOptions = MAKER_OPTIONS_BY_CATEGORY[postCategory];
 
@@ -999,6 +1023,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (selectedMachine) {
+      setDetailImageIndex(0);
+    }
+  }, [selectedMachine]);
+
+  useEffect(() => {
     void loadDbMachines();
   }, [loadDbMachines]);
 
@@ -1198,12 +1228,86 @@ export default function App() {
               <X size={20} />
             </button>
 
-            {/* Images */}
-            <div className="h-80 sm:h-80 bg-slate-200 overflow-hidden relative">
-              <img src={selectedMachine.images[0]} className="w-full h-full object-cover" />
-              <div className="absolute bottom-4 left-4 flex gap-1.5">
-                {selectedMachine.dealTypes.map(t => <Badge key={t} type={t} />)}
+            {/* Images (horizontal slider) */}
+            <div
+              className="h-80 sm:h-80 bg-slate-200 overflow-hidden relative"
+              onTouchStart={(event: React.TouchEvent<HTMLDivElement>) => {
+                const touch = event.touches[0];
+                detailImageTouchStartXRef.current = touch ? touch.clientX : null;
+              }}
+              onTouchEnd={(event: React.TouchEvent<HTMLDivElement>) => {
+                if (!selectedMachine || selectedMachine.images.length <= 1) return;
+                const startX = detailImageTouchStartXRef.current;
+                const touch = event.changedTouches[0];
+                if (startX == null || !touch) return;
+                const diffX = touch.clientX - startX;
+                const threshold = 40; // スワイプ判定のしきい値（px）
+                if (Math.abs(diffX) < threshold) return;
+
+                if (diffX < 0) {
+                  // 左にスワイプ → 次の画像
+                  setDetailImageIndex((prev) =>
+                    prev === selectedMachine.images.length - 1 ? 0 : prev + 1,
+                  );
+                } else {
+                  // 右にスワイプ → 前の画像
+                  setDetailImageIndex((prev) =>
+                    prev === 0 ? selectedMachine.images.length - 1 : prev - 1,
+                  );
+                }
+              }}
+            >
+              <div
+                className="flex h-full w-full transition-transform duration-300 ease-out"
+                style={{ transform: `translateX(-${detailImageIndex * 100}%)` }}
+              >
+                {selectedMachine.images.map((src, idx) => (
+                  <img
+                    key={idx}
+                    src={src}
+                    className="w-full h-full object-cover flex-shrink-0 flex-grow-0 basis-full"
+                    alt={`${selectedMachine.name} ${idx + 1}`}
+                  />
+                ))}
               </div>
+
+              <div className="absolute bottom-4 left-4 flex gap-1.5">
+                {selectedMachine.dealTypes.map((t) => (
+                  <Badge key={t} type={t} />
+                ))}
+              </div>
+
+              {selectedMachine.images.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    className="absolute top-1/2 left-3 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-2"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setDetailImageIndex((prev) =>
+                        prev === 0 ? selectedMachine.images.length - 1 : prev - 1,
+                      );
+                    }}
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <button
+                    type="button"
+                    className="absolute top-1/2 right-3 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-2"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setDetailImageIndex((prev) =>
+                        prev === selectedMachine.images.length - 1 ? 0 : prev + 1,
+                      );
+                    }}
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                  <div className="absolute bottom-4 right-4 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full">
+                    {detailImageIndex + 1} / {selectedMachine.images.length}
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="p-6">
@@ -1486,27 +1590,29 @@ export default function App() {
                     <span>メーカー</span>
                     <span className="text-red-500 align-middle">*</span>
                   </label>
-                  <select
-                    className="flex-1 bg-transparent border-none text-right text-sm text-slate-900 focus:outline-none focus:ring-0"
-                    value={postMakerSelect}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setPostMakerSelect(value);
-                      if (value === 'OTHER') {
-                        setPostMaker('');
-                      } else {
-                        setPostMaker(value);
-                      }
-                    }}
-                  >
-                    <option value="">選択してください</option>
-                    {makerOptions.map((name) => (
-                      <option key={name} value={name}>
-                        {name}
-                      </option>
-                    ))}
-                    <option value="OTHER">その他</option>
-                  </select>
+                  <div className="flex-1 flex justify-end">
+                    <select
+                      className="w-full max-w-[220px] bg-transparent border-none text-right text-sm text-slate-900 focus:outline-none focus:ring-0"
+                      value={postMakerSelect}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setPostMakerSelect(value);
+                        if (value === 'OTHER') {
+                          setPostMaker('');
+                        } else {
+                          setPostMaker(value);
+                        }
+                      }}
+                    >
+                      <option value="">選択してください</option>
+                      {makerOptions.map((name) => (
+                        <option key={name} value={name}>
+                          {name}
+                        </option>
+                      ))}
+                      <option value="OTHER">その他</option>
+                    </select>
+                  </div>
                 </div>
                 {postMakerSelect === 'OTHER' && (
                   <input
@@ -1649,11 +1755,11 @@ export default function App() {
                       レンタル金額（税込）
                       <span className="ml-1 text-red-500 align-middle">*</span>
                     </label>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center">
                       <input
                         type="text"
                         inputMode="numeric"
-                        className="flex-1 border border-slate-200 rounded-lg p-3 text-sm"
+                        className="w-full max-w-[200px] border border-slate-200 rounded-lg p-3 text-sm"
                         placeholder="例：18,000"
                         value={postRentalPrice}
                         onChange={(e) => {

@@ -74,6 +74,8 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
 
   const companiesById = new Map<string, AdminCompany>();
   let companiesErrorMessage: string | null = null;
+  const listingCountByCompanyId = new Map<string, number>();
+  let machinesErrorMessage: string | null = null;
   if (companyIds.length > 0) {
     const { data: companiesData, error: companiesError } = await supabaseAdmin
       .from('companies')
@@ -88,11 +90,30 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
         companiesById.set(c.id, c);
       }
     }
+
+    // machines から会社ごとの出品数を集計（PUBLISHED のみカウント）
+    const { data: machinesData, error: machinesError } = await supabaseAdmin
+      .from('machines')
+      .select('id, owner_company_id, status')
+      .in('owner_company_id', companyIds)
+      .eq('status', 'PUBLISHED')
+      .limit(10000);
+
+    if (machinesError) {
+      machinesErrorMessage = machinesError.message;
+    } else {
+      for (const m of machinesData ?? []) {
+        const ownerId = (m as any).owner_company_id as string | null;
+        if (!ownerId) continue;
+        listingCountByCompanyId.set(ownerId, (listingCountByCompanyId.get(ownerId) ?? 0) + 1);
+      }
+    }
   }
 
   const normalized = rows.map((r) => {
     const company = r.company_id ? companiesById.get(r.company_id) ?? null : null;
-    return { ...r, company };
+    const listingCount = company ? listingCountByCompanyId.get(company.id) ?? 0 : 0;
+    return { ...r, company, listingCount };
   });
 
   const filtered = normalized.filter((r) => {
@@ -244,6 +265,11 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
             会社情報の取得に一部失敗しました（ユーザー一覧は表示します）: {companiesErrorMessage}
           </div>
         )}
+        {!error && machinesErrorMessage && (
+          <div className="bg-amber-50 border border-amber-100 text-amber-800 rounded-xl p-3 text-sm">
+            出品数の取得に一部失敗しました（ユーザー一覧は表示します）: {machinesErrorMessage}
+          </div>
+        )}
 
         <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -252,6 +278,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                 <tr className="text-left text-slate-600">
                   <th className="px-4 py-3 font-bold whitespace-nowrap">名前</th>
                   <th className="px-4 py-3 font-bold whitespace-nowrap">会社名</th>
+                  <th className="px-4 py-3 font-bold whitespace-nowrap text-right">出品数</th>
                   <th className="px-4 py-3 font-bold whitespace-nowrap">ロール</th>
                   <th className="px-4 py-3 font-bold whitespace-nowrap">有効</th>
                   <th className="px-4 py-3 font-bold whitespace-nowrap">会社ステータス</th>
@@ -262,7 +289,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
               <tbody className="divide-y divide-slate-100">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td className="px-4 py-8 text-slate-500" colSpan={7}>
+                    <td className="px-4 py-8 text-slate-500" colSpan={8}>
                       条件に一致するユーザーがいません。
                     </td>
                   </tr>
@@ -274,6 +301,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                       company && (company.prefecture || company.city)
                         ? `${company.prefecture ?? ''}${company.city ?? ''}`
                         : '-';
+                    const listingCount = (u as any).listingCount as number | undefined;
 
                     return (
                       <tr key={u.id} className="hover:bg-slate-50">
@@ -288,6 +316,9 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                               type: <span className="font-semibold">{company.company_type}</span>
                             </div>
                           )}
+                        </td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                          {listingCount ?? 0}
                         </td>
                         <td className="px-4 py-3">
                           <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-bold text-slate-700">
